@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" ng-app='sonny'>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sonny</title>
+
+    <script src="js/lib/angular.min.js"></script>
+    <script src="js/lib/angular-animate.min.js"></script>
+    <script src="js/lib/angular-aria.min.js"></script>
+    <script src="js/lib/angular-material.min.js"></script>  
+    <script src="js/lib/angular-route.min.js"></script> 
+
+    <script src="js/main.js"></script>
+    <script src="js/controllers.js"></script>
+    <script src="js/services.js"></script>
+
+    <link rel="stylesheet" href="css/lib/angular-material.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/lib/bootstrap.min.css">
+    <link rel="stylesheet" href="css/sonny.css">
+    <link rel='icon' href="favicon.ico">
+
+    <script type="text/javascript">
+      var h = document.getElementsByTagName('head'),
+          elem = '<base href="' + window.location.pathname + '" />';
+      angular.element(h).append(angular.element(elem));
+    </script>
+
+  </head>
+  <body>
+    <div ng-controller='mainCtrl'>
+      <div class="panel-default">
+        <header>
+          <ul class="nav nav-pills">
+            <li role="presentation" ng-class="{active: $location.path() == '/current'}">
+              <a href='current'>Now</a>
+            </li>
+            <li role="presentation" ng-class="{active: $location.path() == '/hourly'}">
+              <a href='hourly'>Hourly</a>
+            </li>
+            <li role="presentation" ng-class="{active: $location.path() == '/tenday'}">
+              <a href='tenday'>Ten Day</a>
+            </li>
+            <li role="presentation" ng-class="{active: $location.path() == '/radar'}">
+              <a href='radar'>Radar</a>
+            </li>
+            <li role="presentation" ng-class="{active: $location.path() == '/month'}">
+              <a href='month'>Month</a>
+            </li>
+        </ul>
+      </header>
+        <form ng-submit="$event.preventDefault()" id='acInputForm'>
+          <md-autocomplete md-input-id='acInputId'
+                           md-delay='300'
+                           md-no-cache='true'
+                           md-search-text="searchText"
+                           md-search-text-change="textChg(searchText)"
+                           md-selected-item-change="cityChg(city)"
+                           md-items="city in citySearch(searchText)"
+                           md-item-text="city.text"
+                           md-min-length='0'
+                           md-menu-class="acFade"
+                           tabindex='1'
+                           placeholder="Enter zip code or city">
+            <md-item-template>
+              <span md-highlight-text="searchText"
+                    md-highlight-flags="^i">
+                {{city.text}}
+              </span>
+              <span class="acHome" 
+                    style="float:right;"
+                    ng-show='!$index && !searchText'>
+                Home 
+              </span>
+              <span class="acHome" style="float:right;">
+                <md-checkbox ng-show='$index && !searchText'
+                             ng-checked='showChecked($index)'
+                             ng-click='setHomeCity($index)'
+                             aria-label='zipcode checkbox'
+                             aria-hidden="true">
+                </md-checkbox>
+              </span>
+            </md-item-template>
+          </md-autocomplete>
+        </form>
+        
+        <div ng-view></div>
+
+        <p id='version' ng-cloak>
+          Version 1.24 - {{main.info.location}}
+        </p>
+
+      </div>
+    </div>
+  </body>
+  <script>
+    /* ServiceWorker requires https or localhost, not file://... */
+    if(navigator.onLine){
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+</html>

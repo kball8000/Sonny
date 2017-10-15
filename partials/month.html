@@ -1,0 +1,111 @@
+<div ng-controller='monthCtrl'>
+  <span ng-if='o.info.month.message'> {{o.info.month.message}} </span>
+  <md-card>
+    <md-card-content>
+      <div layout="row">
+
+    <!--    Date inputs  -->
+        <md-input-container>
+          <label>Year</label>
+          <md-select ng-model="o.info.month.year" 
+                     ng-change="newMonth()">
+            <md-option ng-repeat="year in years" 
+                       ng-value="year"
+                       ng-disabled="$index === years.indexOf(o.info.month.year)">
+              {{year}}
+            </md-option>
+          </md-select>
+        </md-input-container>
+        
+        <md-input-container>
+          <label>Month</label>
+          <md-select ng-model="o.info.month.monthText"
+                     ng-change="newMonth()">
+            <md-option ng-repeat="_month in months" 
+                       ng-value="_month"
+                       ng-disabled="$index === months.indexOf(o.info.month.monthText)">
+              {{_month}}
+            </md-option>
+          </md-select>
+        </md-input-container>
+          
+    <!--    Date navigation arrows  -->
+<!--        consider chevron_left and chevron_right-->
+        <md-button class='md-raised chgMonth'
+                   ng-click='nextMonth(false)'>
+          <md-icon md-font-icon='material-icons'>
+            arrow_back
+          </md-icon>
+        </md-button>
+          
+        <md-button class='md-raised chgMonth'
+                   ng-click='nextMonth(true)'>
+          <md-icon md-font-icon='material-icons'
+                   ng-style="{'font-size': '24px'}" >
+            arrow_forward
+          </md-icon>
+        </md-button>
+      </div>
+      
+      <br>
+      <md-button class='md-raised'
+                 ng-show='!o.info.month.complete'
+                 ng-disabled='requestDisabled'
+                 ng-click='requestQueue()'>
+        {{requestText}}
+      </md-button>
+    
+          
+    </md-card-content>
+  </md-card>    
+
+    <!--    Spinner  -->
+    <div layout="row" layout-sm="column" layout-align="space-around">
+      <md-progress-circular ng-show='!o.info.month.weather.cal'
+                            md-mode="indeterminate">
+      </md-progress-circular>
+    </div>
+        
+    <!--    Calendar  -->
+    <table class='table'>
+        <tr>
+            <th ng-repeat="h in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']">{{h}}</th>
+        </tr>
+        <tr ng-repeat='week in o.info.month.weather.cal'>
+            <td ng-repeat='day in week' 
+                ng-class='{noncurrent: day.date[1] !== o.info.month.month}'>
+              <div>
+                {{day.date[2]}}<br>
+                <span ng-show="day.high">H {{day.high}}&deg;<br></span>
+                <span ng-show="day.low">L {{day.low}}&deg;<br></span>
+                <span ng-show="day.rain > 0">Rain </span>
+                <span ng-show="day.precip > 0">{{day.precip}}"<br></span>
+                <span ng-show="day.snow > 0">Snow </span>
+                <span ng-show="day.snowfall > 0">{{day.snowfall}}"<br></span>
+              </div>
+            </td>
+        </tr>
+    </table>
+  
+  <!--    Totals  -->
+  <md-card>
+    <md-card-content>
+      <p ng-show='o.info.month.weather.totalrainfall'>
+        Total Rain: {{o.info.month.weather.totalrainfall | number:2}}"
+      </p>
+      <p ng-show='o.info.month.weather.totalsnowfall'>
+        Total Snow: {{o.info.month.weather.totalsnowfall | number:2}}"
+      </p>
+      <p ng-show='o.info.month.weather.heatingdegreedays'>
+        Heating deg days: {{o.info.month.weather.heatingdegreedays}}
+      </p>
+      <p ng-show='o.info.month.weather.coolingdegreedays'>
+        Cooling deg days: {{o.info.month.weather.coolingdegreedays}}
+      </p>
+      <p ng-show='o.info.month.weather.mean_temp'>
+        Mean Temp: {{o.info.month.weather.mean_temp}}&deg;F
+      </p>
+    </md-card-content>
+  </md-card>
+  
+</div>

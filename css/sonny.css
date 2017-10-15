@@ -1,0 +1,130 @@
+@media (max-width: 500px) {
+  .nav-pills li{
+  /*  due to 2px between pills by bootstrap*/
+    width: 19%;
+  }
+  .nav-pills li a{
+    text-align: center;
+    padding: 14px 0;
+  }
+
+.acHome{
+    margin-left: 30px;
+    padding-left: 30px;
+}
+.temp{
+    font-weight: bold;
+}
+.feel{
+    color: gray;
+    font-size: 0.9em;
+}
+/* Remove currentRow*/
+.currentRow{
+    padding-left: 1em;
+    padding-top: 1.5em;
+    padding-bottom: 1.5em;
+}
+.imageCol{
+    padding-left: 7px;
+}
+.dateTimeCol{
+    color: gray;
+    font-size: 0.9em;
+    padding-left: 7px;
+    padding-right: 2px;
+}
+.hrCol{
+    padding-top: 16px;
+}
+.tempCol{
+    padding-left: 4px;
+    padding-right: 4px;
+}
+.conditionsCol{
+    padding-left: 5px;
+}
+.tendayDetails{
+    padding: 0.7em 1em 0.1em 1em;
+    margin: 0 -1.1em -0.7em -1.1em;
+    background-color: #F1F1F1;
+    border-top: 1px solid lightgray;
+}
+.dimmed{
+    font-variant: small-caps;
+}
+
+  
+/*Autocomplete*/
+#acInputForm{
+  width: 80%;
+}
+.acHome{
+  padding-left: 30px;
+}
+.acFade{
+  font-size: 2em;
+}
+.acFade.ng-move {
+  transition:2s linear all;
+  opacity:0.5;
+}
+.acFade.ng-move.ng-move-active {
+  opacity:1;
+}
+.acFade.ng-add {
+  transition:2s linear all;
+  opacity:0;
+}
+.acFade.ng-add.ng-add-active {
+  opacity:1;
+}
+.acFade.ng-enter {
+  transition:2s linear all;
+  opacity:0;
+}
+.acFade.ng-enter.ng-enter-active {
+  opacity:1;
+}
+.acFade.ng-leave {
+  transition:2s linear all;
+  opacity:1;
+}
+.acFade.ng-leave.ng-leave-active {
+  opacity:0;
+}
+
+
+/* Month */
+ td {
+    font-size:  0.8em;
+  }
+}
+.noncurrent {
+  color: gray;
+  background-color: lightgray;
+}
+.chgMonth {
+  margin-top: 14px;
+  margin-bottom: 20px;
+  min-width: 4em;
+}
+
+/* Radar */
+.radar-button {
+  position: fixed;
+  min-width: 3em;
+  right: 1em;
+}
+.radar-plus {
+  bottom: 3em;
+}
+.radar-minus {
+  bottom: 0em;
+}
+
+
+/* Refinements */
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}

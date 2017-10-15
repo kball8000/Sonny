@@ -1,0 +1,45 @@
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+# Just for testing other sites ability to download from web / CORS
+#- url: /tt
+#  static_dir: tt
+#  http_headers: 
+#    Access-Control-Allow-Origin: "*"  
+
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+  
+- url: /sw\.js
+  static_files: sw.js
+  upload: sw\.js
+
+- url: /css
+  static_dir: css
+
+- url: /js
+  static_dir: js
+
+- url: /images
+  static_dir: images
+
+- url: /partials
+  static_dir: partials
+#  http_headers: 
+#    Access-Control-Allow-Origin: http://sites-kjb.s3-website-us-east-1.amazonaws.com
+
+- url: /purgecache
+  script: purgecache.app
+  login: admin
+
+# Runs serv-weather-cal.py
+- url: /.*
+  script: serv-weather-cal.app
+  secure: always
+
+libraries:
+- name: webapp2
+  version: "2.5.1"

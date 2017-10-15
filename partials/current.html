@@ -1,0 +1,110 @@
+<div ng-controller='currentCtrl'>
+  <!--    Spinner    -->
+  <div layout="row" layout-sm="column" layout-align="space-around">
+    <md-progress-circular ng-show='o.info.current.progress' 
+                          md-mode="indeterminate">
+    </md-progress-circular>
+  </div>
+  
+  <!--    Current Forecast / Conditions    -->
+  <div ng-show='!o.info.current.progress'>
+    <p ng-show='o.info.current.message'> {{o.info.current.message}} </p>
+    
+    <div layout='row' style="margin: 14px 0;">
+      <div class="imageCol" flex='20'>
+        <img ng-src='{{o.info.current.weather.icon_url}}'/>
+      </div>
+      <div flex='20'>
+        <span class="temp">
+          {{o.info.current.weather.temp}}&deg;F
+        </span><br>
+        <span class="feel">
+          Feels: {{o.info.current.weather.feels}}&deg;F
+        </span>
+      </div>
+      <div flex='20'>
+        <span class="temp">
+          {{o.info.current.weather.high}}/{{o.info.current.weather.low}}&deg;F
+        </span>
+      </div>
+      <div flex>
+        {{o.info.current.weather.conditions}}
+        <br>
+        {{o.info.current.weather.precipchance}}%
+        <br>
+        {{o.info.current.weather.wind}} {{o.info.current.weather.winddir}}
+      </div>
+    </div>
+
+<!--
+    <div class='currentRow  row'>
+      <div class="col-xs-2 imageCol">
+        <img ng-src='{{o.info.current.weather.icon_url}}'/>
+      </div>
+      <div class="col-xs-2">
+        <span class="temp">
+          {{o.info.current.weather.temp}}&deg;F
+        </span>
+        <span class="feel">
+          Feels: {{o.info.current.weather.feels}}&deg;F
+        </span>
+      </div>
+      <div class="col-xs-2">
+        <span class="temp">
+          {{o.info.current.weather.high}}/{{o.info.current.weather.low}}&deg;F
+        </span>
+      </div>
+      <div class="col-xs-6">
+        {{o.info.current.weather.conditions}}
+        <br>
+        {{o.info.current.weather.precipchance}}%
+        <br>
+        {{o.info.current.weather.wind}} {{o.info.current.weather.winddir}}
+      </div>
+    </div>
+-->
+    
+    <!--    Today's Forecast    -->
+    <md-card>
+      <md-card-content>
+        <p>{{o.info.current.weather.forecastTitle0}}: {{o.info.current.weather.forecastText0}}</p>
+        <p>{{o.info.current.weather.forecastTitle1}}: {{o.info.current.weather.forecastText1}}</p>
+      </md-card-content>
+    </md-card>
+    
+    <!--    Sunrise/Sunset and Records    -->
+    <md-card>
+      <md-card-content>
+        <p>
+          Sunrise: {{o.info.current.weather.sunriseHour}}:{{o.info.current.weather.sunriseMin}} AM<br>
+          Sunset: {{o.info.current.weather.sunsetHour}}:{{o.info.current.weather.sunsetMin}} PM
+        </p>
+        <p>Avg High: {{o.info.current.weather.high_avg}}&deg;F
+          Low: {{o.info.current.weather.low_avg}}&deg;F
+        </p>
+        <p>Record High: {{o.info.current.weather.high_record}}&deg;F
+          Year: {{o.info.current.weather.high_recordyear}}
+          Low: {{o.info.current.weather.low_record}}&deg;F
+          Year: {{o.info.current.weather.low_recordyear}}
+        </p>
+      </md-card-content>
+    </md-card>
+    
+    <!--    Weather Alerts    -->
+    <md-card ng-show='alerts.length'>
+      <md-card-content>
+        <ul class="list-group">
+          <li class='list-group-item' ng-repeat='alert in o.info.current.weather.alerts'>
+            Type: {{alert.description}}
+            <br>
+            Date: {{alert.date}}
+            <br>
+            Expires: {{alert.expires}}
+            <br>
+            <span style="font-family:courier, monospace;">{{alert.message}}</span>
+          </li>
+        </ul>
+      </md-card-content>
+    </md-card>
+  </div>
+</div>

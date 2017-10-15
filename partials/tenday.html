@@ -1,0 +1,42 @@
+<div ng-controller='tendayCtrl'>
+  <div layout="row" layout-sm="column" layout-align="space-around">
+    <md-progress-circular ng-show='o.info.tenday.progress' 
+                          md-mode="indeterminate">
+    </md-progress-circular>
+  </div>
+  
+  <div ng-show='!o.info.tenday.progress'>
+    <p ng-show='o.info.tenday.message'>{{o.info.tenday.message}}</p>
+    <ul class="list-group">
+      <li class="list-group-item" 
+          ng-repeat='day in o.info.tenday.weather' 
+          ng-click='details=!details'>
+        <div class="row">
+          <div class="col-xs-2 imageCol">
+            <img ng-src='{{day.icon_url}}'/>
+          </div>
+          <div class="col-xs-2 dateTimeCol">
+            {{day.day}}
+            <br>
+            {{day.date}}
+          </div>
+          <div class='col-xs-3 tempCol'>
+            <span class="temp"> {{day.high}}/{{day.low}}&deg;F
+            </span>
+            <br>
+            {{day.wind}} {{day.winddir}}
+          </div>
+          <div class="col-xs-5 conditionsCol">
+            {{day.conditions}}                
+            <br>
+            {{day.precipchance}}%
+          </div>                    
+        </div>
+        <div class="tendayDetails" ng-show='details'>
+          <p><span class="dimmed">Daytime </span>{{day.detail_am}}</p>
+          <p><span class="dimmed">Overnight </span>{{day.detail_pm}}</p>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>

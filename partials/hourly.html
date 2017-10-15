@@ -1,0 +1,36 @@
+<div ng-controller='hourlyCtrl'>
+  <div layout="row" layout-sm="column" layout-align="space-around">
+    <md-progress-circular ng-show='o.info.hourly.progress' 
+                          md-mode="indeterminate">
+    </md-progress-circular>
+  </div>
+  
+  <div ng-show='!o.info.hourly.progress'>
+    <p ng-show='o.info.hourly.message'> {{o.info.hourly.message}} </p>
+    <ul class='list-group'>
+      <li class="s-li list-group-item" ng-repeat='hour in o.info.hourly.weather'>
+        <div class="row">
+          <div class="col-xs-2 imageCol">
+            <img ng-src='{{hour.icon_url}}'/>
+          </div>
+          <div class="col-xs-2 dateTimeCol hrCol">
+            <span>{{hour.hour}}</span>
+          </div>
+          <div class="col-xs-3 tempCol">
+            <span class="temp">{{hour.temp}}&deg;F</span>
+            <br>
+            <span class="feel">Feel: {{hour.feels}}&deg;F
+            </span>
+            <br>
+            {{hour.wind}} {{hour.winddir}}
+          </div>
+          <div class="col-xs-5 conditionsCol">
+            {{hour.condition}}
+            <br>
+            {{hour.precipchance}}%
+          </div>
+        </div>
+      </li>
+    </ul>    
+  </div>
+</div>

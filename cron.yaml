@@ -1,0 +1,4 @@
+cron:
+- description: purge cache
+  url: /purgecache
+  schedule: every 24 hours
