@@ -31,14 +31,13 @@ var app = angular.module('weatherServices', [])
     var d = [];
     d[0] = parseInt(s.substr(0, 4));
     d[1] = parseInt(s.substr(4, 2)) - 1;    // convert to JS month, i.e. Jan=0
-//    d[1] = (d[1] < 10) ? '0' + d[1].toString() : d[1].toString();    
     d[2] = parseInt(s.substr(6, 2));
     d[3] = parseInt(s.substr(8, 2));
     d[4] = parseInt(s.substr(10, 2));
     d[5] = parseInt(s.substr(12, 2));
       
     return d;
-    }
+  }
   this.freshWarning = function(dateArr, view) {
     var message = '', datetime;
     if(!this.isFresh(dateArr, view)){
