@@ -22,7 +22,7 @@ import s_month
 from google.appengine.api import taskqueue
 #import random
 #import time
-# import logging
+import logging
 import keys
 
 # Classes for server objects and their methods    
@@ -225,12 +225,6 @@ def send_radar(self, success, radar=None):
 class Basic(webapp2.RequestHandler):
     def get(self):
         page = open('index.html')
-        base = 'https://api.wunderground.com/api/' + keys.key + '/'
-        logging.info('keys: %s' %keys)
-        logging.info('key: %s' %keys.key)
-        logging.info('base: %s' %base)
-        
-
 
         self.response.write(page.read())
 class GetWeather(webapp2.RequestHandler):

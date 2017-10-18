@@ -34,9 +34,9 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
         autocomp.savedCities  = r.value;
       } else{
         var initCities = [
-          {zip: '61603', text: 'Peoria, IL'},
-          {zip: '45202', text: 'Cincinnati, OH'},
-          {zip: '37501', text: 'Memphis, TN'}
+          {zip: '61601', text: 'Peoria, Illinois'},
+          {zip: '45201', text: 'Cincinnati, Ohio'},
+          {zip: '37501', text: 'Memphis, Tennessee'}
         ];
         autocomp.savedCities  = initCities;
         wDB._put('savedCities', initCities);
@@ -46,6 +46,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       })
     })
   })
+
+  $scope.logData = () => {
+    console.log('data: ', wData);
+  }
 
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
@@ -75,7 +79,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     }
   }
   $scope.cityChg = function(city) {
-  /* When editing text from 5 char to 4, itemChg fires again, but is undefined since it is not in the list, be sure not to send server request for 4 char zip code. Maybe server can check for 5 char zip. */
+    /* When editing text from 5 char to 4, itemChg fires again, but is undefined since it 
+       is not in the list, be sure not to send server request for 4 char zip code. Maybe 
+       server can check for 5 char zip. 
+    */
     if(city){
       if(city.zip !== wData.info.zip){
         newWeatherObj(city).then(r => { 

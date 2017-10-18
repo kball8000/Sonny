@@ -321,9 +321,24 @@ var app = angular.module('weatherServices', [])
   function addCity(newCity) {
     // Add user entered zip to the top of the 'most recent' list
     // and remove duplicate entry, if it was already in list.
+
+
+    /*
+    WORKING HERE.
+    CURRENTLY BORKEN. TRY EITHER B = [...A, 3, 4, 5] OR B = A.PUSH.APPLY(A,B)
+     */
+
+    let home;
+    if (ac.savedCities.includes(newCity)) {
+
+    } else {
+      ac.savedCities.unshift(newCity);
+      ac.savedCities.unshift(home);
+    }
     
-    let home = ac.savedCities.shift(),
-        index = ac.savedCities.indexOf(newCity);
+    let home = ac.savedCities.shift();
+    console.log('saved cites: ', );
+    let index = ac.savedCities.indexOf(newCity);
     if ( index !== -1 ) {
       ac.savedCities.splice(index, 1);
     }

@@ -88,8 +88,9 @@
         <div ng-view></div>
 
         <p id='version' ng-cloak>
-          Version 1.24b - {{main.info.location}}
+          Version 1.24b - {{main.info.location}} - {{main.info.zip}}
         </p>
+        <button ng-click='logData()'>logData</button>
 
       </div>
     </div>
