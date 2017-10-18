@@ -3,6 +3,9 @@
 // 2016 
 
 var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
+.config(function($mdGestureProvider) {
+  $mdGestureProvider.skipClickHijack();
+})
 .controller('mainCtrl', function($scope, $location, $timeout, $http, $q, wData, wDB, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
@@ -43,14 +46,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       })
     })
   })
-  
-  /* This makes the input element lose focus when you pick anywhere but the input field. It seemed like a bug to me on android, no problem on laptop. */
-  document.onclick = function(e) {
-    if(e.srcElement.id !== 'acInputId'){
-      document.getElementById('acInputId').blur();
-    }
-  }
-  
+
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */

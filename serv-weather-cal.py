@@ -22,8 +22,8 @@ import s_month
 from google.appengine.api import taskqueue
 #import random
 #import time
-import logging
-import keys         # TESTING
+# import logging
+import keys
 
 # Classes for server objects and their methods    
 def fresh_weather(obj):
