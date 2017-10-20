@@ -64,6 +64,8 @@ var app = angular.module('weatherServices', [])
     this.radar    = data.createRadarObj(city.zip);
   }  
   data.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // See autocomplete service for explanation of setHome.
+  data.setHome = {flag: false, city: {}};
   data.createForecastObj = function(dict) {
     return {
       weather:      (dict) ? {} : [],
@@ -284,16 +286,29 @@ var app = angular.module('weatherServices', [])
     })
   }
 })
-.service('autocomp', function(wDB, $http) {
+.service('autocomp', function(wData, wDB, $http) {
   ac = {
-    citySearch:   citySearch,     // UPDATED
-    savedCities:  [],             // NEW
-    setHomeCity:  setHomeCity,    // UPDATED
+    citySearch:   citySearch,
+    savedCities:  [],
+    setHomeFlag:  setHomeFlag,
+    setHomeCity:  setHomeCity,
     addCity:      addCity
   };
-  function setHomeCity(index) {
-    var newHome = ac.savedCities.splice(index, 1);
+  /** Created this setHome flag concept so I could refresh weather using selected city
+   * which runs after the checkbox function. Checkbox function will alter cities list causing
+   * it to refresh weather on wrong city. Now flag allows weather to be retrieved first and list
+   * altered second.
+   */
+  function setHomeFlag(city) {
+    wData.setHome.flag = true;
+    wData.setHome.city = city;
+  }
+  function setHomeCity() {
+    let idx     = ac.savedCities.indexOf(wData.setHome.city);
+    let newHome = ac.savedCities.splice(idx, 1);
     ac.savedCities.unshift(newHome[0]);
+
+    wData.setHome.flag = false;
     wDB._put('savedCities', ac.savedCities);
   }  
   function wuAutocompleteRequest(query) {
@@ -317,7 +332,6 @@ var app = angular.module('weatherServices', [])
   function citySearch(query) {
     return query ? wuAutocompleteRequest(query) : ac.savedCities;
   }
-
   function addCity(newCity) {
     // Add user entered/selected zip to the top of the 'most recent' list
     // and remove duplicate entry, if it was already in list.
@@ -341,7 +355,7 @@ var app = angular.module('weatherServices', [])
   
   return ac;
 })
-.service('weather', function($http, $timeout, wData, wDates, wDB){
+.service('weather', function($http, $timeout, wData, wDates, wDB, autocomp){
   function httpReq(view){
     var _url, config = {},
         data = {
@@ -433,7 +447,6 @@ var app = angular.module('weatherServices', [])
       obj.weather  = newData.weather;
     } else {    // current / hourly / tenday
       if(Object.keys(newData).indexOf('error') === -1){
-//          newData.lastUpdated[1]--;   // convert from python to JS month.
           obj.weather     = newData[view];
           obj.lastUpdated = newData.lastUpdated;
       } else {
@@ -443,7 +456,10 @@ var app = angular.module('weatherServices', [])
   }
   // NEED TO REWRITE / RENAME CHECKWDB FUNCTION
   function checkWDB(view) {
-/* Checks indexDB for data before server request and as a fallback if there is a server error. Checks zip is still current, as this can be called after a server request, within that time the zip could be changed by user. */
+    /* Checks indexDB for data before server request and as a fallback if there is a server error. 
+       Checks zip is still current, as this can be called after a server request, within that time 
+       the zip could be changed by user. 
+    */
     var obj = wData.info[view];
     if(!obj.progress && obj.weather){
       obj.message = wDates.freshWarning(obj.lastUpdated, view);
@@ -566,11 +582,9 @@ var app = angular.module('weatherServices', [])
             wData.info.radar = r.value;
           } else{
             requestRadar(radar);
-//          requestRadar(radar).then(r => {radar.progress = false;})
           }
         } catch(e) {
           requestRadar(radar);
-//          requestRadar(radar).then(r => {radar.progress = false;})
         }
       })
     } else {
@@ -578,7 +592,10 @@ var app = angular.module('weatherServices', [])
     }
   }
   this.refreshForecasts = function() {
-    /* The goal here is to refresh as much as possible with the current page taking priority. Expensive calls like radar (filesize / not used as often as other features) and month (uses lots of limited wu api calls on server) are more on demand. */
+    /* The goal here is to refresh as much as possible with the current page taking priority. 
+       Expensive calls like radar (filesize / not used as often as other features) and month 
+       (uses lots of limited wu api calls on server) are more on demand. 
+    */
     var view = wData.setRequestView();
     wData.removeOld();
 
@@ -610,29 +627,7 @@ var app = angular.module('weatherServices', [])
       $timeout(refreshCurrent, 500);
       $timeout(refreshTenday, 500);
     }
+    (wData.setHome.flag) ? autocomp.setHomeCity() : 0;
     wDB.cleanupCache();
-  }
-
-  // Probably remove getCityFromZip
-  this.getCityFromZip = function() {
-    wDB._get('zip-city-xref').then(r => {
-      var zipCrossRef = (r) ? r.value : {};
-      var obj = wData.info;
-      obj.location = zipCrossRef[obj.zip];
-
-      if (!obj.location){
-        var url = 'https://autocomplete.wunderground.com/aq?query=';
-        url = url + obj.zip + '&cb=JSON_CALLBACK';
-        $http.jsonp(url).then(r => {
-          try{
-            obj.location = r.data.RESULTS[0].name.substring(8);
-            zipCrossRef[wData.info.zip] = obj.location;
-            wDB._put('zip-city-xref', zipCrossRef);            
-          } catch(e) {
-            console.log('error cross referencing zip at wu');
-          }
-        })      
-      }
-    })
   }
 });

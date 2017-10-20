@@ -74,9 +74,10 @@
                 Home 
               </span>
               <span class="acHome" style="float:right;">
+                  <!-- ng-click='setHomeFlag($index)' -->
                 <md-checkbox ng-show='$index && !searchText'
                              ng-checked='showChecked($index)'
-                             ng-click='setHomeCity($index)'
+                             ng-click='setHomeFlag(city)'
                              aria-label='zipcode checkbox'
                              aria-hidden="true">
                 </md-checkbox>
@@ -88,9 +89,9 @@
         <div ng-view></div>
 
         <p id='version' ng-cloak>
-          Version 1.24c - {{main.info.location}} - {{main.info.zip}}
+          Version 1.24d - {{main.info.location}} - {{main.info.zip}}
         </p>
-        <!-- <button ng-click='logData()'>logData</button> -->
+        <button ng-click='logData()'>logData</button>
 
       </div>
     </div>

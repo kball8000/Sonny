@@ -10,7 +10,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
-  $scope.setHomeCity  = autocomp.setHomeCity;
+  $scope.setHomeFlag  = autocomp.setHomeFlag;
 
   /* Get the weather data. */
   function newWeatherObj(city) {
@@ -47,10 +47,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     })
   })
 
-  // $scope.logData = () => {
-  //   console.log('data: ', wData);
-  //   console.log('autocomp: ', autocomp);
-  // }
+  $scope.logData = () => {    // TESTING
+    console.log('data: ', wData);
+    console.log('autocomp: ', autocomp);
+  }
 
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
@@ -84,6 +84,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
        is not in the list, be sure not to send server request for 4 char zip code. Maybe 
        server can check for 5 char zip. 
     */
+    (city) ? console.log('running city change: ', city.text) : 0;
     if(city && city.zip !== wData.info.zip){
       newWeatherObj(city).then(r => { 
         weather.refreshForecasts();
