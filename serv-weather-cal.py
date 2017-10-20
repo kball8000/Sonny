@@ -9,21 +9,23 @@
 # user to request server to get entire month and/or year in the background
 
 from google.appengine.api import urlfetch
+from google.appengine.api import taskqueue
 from datetime import datetime, timedelta
 import json
 import webapp2
 
 # custom modules
+import keys
 import models   # ndb.Model from app engine datastore
 import s_utils
 import s_month
 
 # debugging
-from google.appengine.api import taskqueue
-#import random
-#import time
-import logging
-import keys
+
+# import random
+# import time
+# import logging
+
 
 # Classes for server objects and their methods    
 def fresh_weather(obj):
@@ -84,7 +86,6 @@ def process_current(raw):
     d['feels']      = c['feelslike_f']
     d['wind']       = str(c['wind_mph']) 
     d['winddir']    = c['wind_dir']
-    # d['icon_url']   = 'images/icons/' + c['icon'] + '.gif'
     d['icon_url']   = c['icon_url'].replace('http://', 'https://')
 
     f = raw['forecast']['simpleforecast']['forecastday']
@@ -135,7 +136,6 @@ def process_current(raw):
         _h['feels'] = t['feelslike']['english']
         _h['precipchance'] = t['pop']
         _h['condition'] = t['condition']
-        # _h['icon_url']   = 'images/icons/' + t['icon'] + '.gif'
         _h['icon_url']   = t['icon_url'].replace('http://', 'https://')
         _h['wind'] = str(t['wspd']['english']) + ' ' + t['wdir']['dir']
         h.append(_h)
@@ -151,7 +151,6 @@ def process_tenday(raw):
         d['low']    = w['low']['fahrenheit']
         d['precipchance'] = w['pop']
         d['conditions'] = w['conditions']
-        # d['icon_url']   = 'images/icons/' + w['icon'] + '.gif'
         d['icon_url']   = w['icon_url'].replace('http://', 'https://')
         d['day']    = w['date']['weekday_short']
         d['date']   = w['date']['monthname_short'] + ' ' + str(w['date']['day'])
@@ -304,7 +303,7 @@ class AddToQueue(webapp2.RequestHandler):
                 target = 'worker',
                 payload = self.request.body
             )
-            logging.info('task name: %s, eta: %s' %(task.name, task.eta))
+            # logging.info('task name: %s, eta: %s' %(task.name, task.eta))
         
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps({'task': 'succeeded adding task'}))

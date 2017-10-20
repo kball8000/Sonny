@@ -319,35 +319,25 @@ var app = angular.module('weatherServices', [])
   }
 
   function addCity(newCity) {
-    // Add user entered zip to the top of the 'most recent' list
+    // Add user entered/selected zip to the top of the 'most recent' list
     // and remove duplicate entry, if it was already in list.
 
+    let max_length  = 15;
+    let home        = ac.savedCities[0];
+    let idx         = ac.savedCities.indexOf(newCity);
 
-    /*
-    WORKING HERE.
-    CURRENTLY BORKEN. TRY EITHER B = [...A, 3, 4, 5] OR B = A.PUSH.APPLY(A,B)
-     */
-
-    let home;
-    if (ac.savedCities.includes(newCity)) {
-
-    } else {
-      ac.savedCities.unshift(newCity);
-      ac.savedCities.unshift(home);
+    if (idx > 1) {
+      ac.savedCities.splice(idx, 1);
+      ac.savedCities = [home, newCity, ...ac.savedCities.slice(1)]
+    } else if (idx === -1) {
+      ac.savedCities = [home, newCity, ...ac.savedCities.slice(1)]
+      ac.savedCities = ac.savedCities.slice(0, max_length);
     }
-    
-    let home = ac.savedCities.shift();
-    console.log('saved cites: ', );
-    let index = ac.savedCities.indexOf(newCity);
-    if ( index !== -1 ) {
-      ac.savedCities.splice(index, 1);
+
+    if (idx > 1 || idx === -1) {
+      wDB._put('savedCities', ac.savedCities);
     }
-    ac.savedCities.unshift(newCity);
-    ac.savedCities.unshift(home);
-    ac.savedCities.splice(20);
-    wDB._put('savedCities', ac.savedCities);
   }
-  
   
   return ac;
 })

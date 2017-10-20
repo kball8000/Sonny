@@ -1,4 +1,4 @@
-var CACHE_NAME = 'sonny-v1.24b';
+var CACHE_NAME = 'sonny-v1.24c';
 
 var urlsToCache = [
     '/favicon.ico'   

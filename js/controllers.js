@@ -47,9 +47,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     })
   })
 
-  $scope.logData = () => {
-    console.log('data: ', wData);
-  }
+  // $scope.logData = () => {
+  //   console.log('data: ', wData);
+  //   console.log('autocomp: ', autocomp);
+  // }
 
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
@@ -83,16 +84,14 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
        is not in the list, be sure not to send server request for 4 char zip code. Maybe 
        server can check for 5 char zip. 
     */
-    if(city){
-      if(city.zip !== wData.info.zip){
-        newWeatherObj(city).then(r => { 
-          weather.refreshForecasts();
-        })
-        
-        autocomp.addCity(city);
-        $scope.searchText = '';
-        document.getElementById('acInputId').blur();
-      }
+    if(city && city.zip !== wData.info.zip){
+      newWeatherObj(city).then(r => { 
+        weather.refreshForecasts();
+      })
+      
+      autocomp.addCity(city);
+      $scope.searchText = '';
+      document.getElementById('acInputId').blur();
     }
   }
 })
