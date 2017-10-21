@@ -3,12 +3,18 @@
 
 var app = angular.module('weatherServices', [])
 .service('wDates', function($filter){
-/* Dates are stored with UTC time. Beware javascript date function displaying a new date in local time. */
+  /**
+   * Dates are stored with UTC time. Beware javascript date function displaying a new 
+   * date in local time.
+   */
   this.getLimit     = function(view) {
     var obj = {
-      current:            15*60*1000,   // cache
-      hourly:             15*60*1000,   // cache
-      tenday:           6*60*60*1000,   // cache
+      current:                  1000,   // cache
+      hourly:                   1000,   // cache
+      tenday:                   1000,   // cache
+      // current:            15*60*1000,   // cache
+      // hourly:             15*60*1000,   // cache
+      // tenday:           6*60*60*1000,   // cache
       radar:              20*60*1000,   // cache
       weather_DB:   11*24*60*60*1000,   // removal from indexedDB
       radar_DB:         4*60*60*1000    // removal from indexedDB
@@ -435,7 +441,7 @@ var app = angular.module('weatherServices', [])
   }
   function updateView(view, newData) {
     // This function is intended to be wrapped in a try/catch above it.
-    var obj     = wData.info[view];
+    var obj = wData.info[view];
     
     if(view === 'radar') {
       obj.weather.img     = newData.data;
@@ -447,8 +453,8 @@ var app = angular.module('weatherServices', [])
       obj.weather  = newData.weather;
     } else {    // current / hourly / tenday
       if(Object.keys(newData).indexOf('error') === -1){
-          obj.weather     = newData[view];
-          obj.lastUpdated = newData.lastUpdated;
+        obj.weather     = newData[view];
+        obj.lastUpdated = newData.lastUpdated;
       } else {
         obj.message = newData.error;
       }      
@@ -460,12 +466,22 @@ var app = angular.module('weatherServices', [])
        Checks zip is still current, as this can be called after a server request, within that time 
        the zip could be changed by user. 
     */
+    console.log('checking db: ', view);
     var obj = wData.info[view];
-    if(!obj.progress && obj.weather){
-      obj.message = wDates.freshWarning(obj.lastUpdated, view);
-    } else if(!obj.progress) {
-      obj.message = 'No ' + view + ' data available';
-    }    
+
+    // if(!obj.progress && obj.weather){
+    console.log('checking db, if: ', view);
+    obj.message = wDates.freshWarning(obj.lastUpdated, view);
+    wDB._get('weather-' + wData.info.zip).then(r => {
+      console.log('wDB result: ', r.value[view].weather);
+      obj.weather = r.value[view].weather;
+    })
+
+    // } else if(!obj.progress) {
+    //   console.log('checking db else if: ', view);
+    //   obj.message = 'No ' + view + ' data available';
+    // }
+    console.log('DONE checking db: ', view);
   }
   function refreshCurrent() {
     var current = wData.info.current,
@@ -477,27 +493,34 @@ var app = angular.module('weatherServices', [])
     if(!wDates.isFresh(current.lastUpdated, 'current')){
       current.progress = true;                // start the spinner
       hourly.progress = true;                 // start the spinner
+      console.log('requsting current from server');
       httpReq('current').then(r => {
         
         try {
           if(wData.info.zip === r.data.zip) {
             r.data.lastUpdated[1]--;          // convert from python to JS month.
+            let v0 = r.data.current.temp,
+                v1 = r.data.hourly[0].temp;
+            console.log('got current r.data from server: ', r.data);
+            console.log('current temp: ', v0, ', first hourly temp: ', v1);
             updateView('current', r.data);
             updateView('hourly', r.data);
             wDB._put(wData.info.id, wData.info);
           }
         } catch(e) {
+          console.log('httpReq cur/hr success, but catch on updatingView', );
           checkWDB('current');
           checkWDB('hourly');          
         }
         current.progress  = false;
         hourly.progress   = false;
     }, e => {
-        checkWDB('current');
-        checkWDB('hourly');
-        current.progress  = false;
-        hourly.progress   = false;
-      })
+      console.log('error getting cur/hr data from server, checking local DB');
+      current.progress  = false;
+      hourly.progress   = false;
+      checkWDB('current');
+      checkWDB('hourly');
+    })
     }
   }
   function refreshTenday() {
@@ -512,14 +535,17 @@ var app = angular.module('weatherServices', [])
           if(wData.info.zip === r.data.zip) {
             r.data.lastUpdated[1]--;          // convert from python to JS month.
             updateView('tenday', r.data);
+            wDB._put(wData.info.id, wData.info);
           }
         } catch(e) {
+          console.log('httpReq 10day success, but catch on updatingView', );
           checkWDB('tenday');
         }
         tenday.progress = false;
       }, e => {
-        checkWDB('tenday');
+        console.log('error getting 10day data from server, checking local DB');
         tenday.progress = false;
+        checkWDB('tenday');
       })
     }
   }

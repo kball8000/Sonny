@@ -50,6 +50,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.logData = () => {    // TESTING
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
+    console.log('wDB', wDB);
   }
 
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
