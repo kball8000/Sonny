@@ -53,7 +53,7 @@ var app = angular.module('weatherServices', [])
   this.isExpired    = function(dateArray, view) {
     var limit       = this.getLimit(view),
         now         = Date.now(),
-        lastUpdated = this.utcFromArr(dateArray);
+        lastUpdated = this.utcFromArr(dateArray).valueOf();
     return now - lastUpdated > limit;
   }
   this.convStr      = function(s) {
@@ -628,9 +628,10 @@ var app = angular.module('weatherServices', [])
        Expensive calls like radar (filesize / not used as often as other features) and month 
        (uses lots of limited wu api calls on server) are more on demand. 
     */
+
     let view  = wData.setRequestView(),
         limit = 2000;   // Limits how long we wait for http request.
-
+        
     if(view === 'tenday'){
       refreshTenday();    // generally faster than current, so no timeout reqd.
       refreshCurrent();

@@ -6,11 +6,13 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 .config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
 })
-.controller('mainCtrl', function($scope, $location, $timeout, $http, $q, wData, wDB, wLog, weather, autocomp) {
+.controller('mainCtrl', function($scope, $interval, $location, $timeout, $http, $q, wData, wDB, wLog, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
+
+  $interval(weather.refreshForecasts, 10000);
 
   /* Get the weather data. */
   function newWeatherObj(city) {
