@@ -6,7 +6,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 .config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
 })
-.controller('mainCtrl', function($scope, $location, $timeout, $http, $q, wData, wDB, weather, autocomp) {
+.controller('mainCtrl', function($scope, $location, $timeout, $http, $q, wData, wDB, wLog, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
@@ -51,6 +51,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
     console.log('wDB', wDB);
+    wLog.getLogs().then(r => console.log('logs: ', r))
   }
   $scope.downloadWeather = () => {   // TESTING
     console.log('downloading weather');

@@ -6,7 +6,6 @@ var app = angular.module('weatherServices', [])
   this.log = function(level, value) {
     // AacceptableKeys = 'error', 'warning' or 'info'
     wDB._get('logs').then(r => {
-      console.log('logs from wDB, r: ', r);
       let ts = $filter('date')(Date.now(), 'medium'),
           logs = (r && r.value) ? r.value : [];
       logs.push({level: level, timestamp: ts, value: value})
@@ -22,10 +21,10 @@ var app = angular.module('weatherServices', [])
         deferred.resolve(r.value) 
       } else {
         deferred.reject({level: 'info', value: 'No logs available'}); 
-      }
-  
-      return deferred.promise;
+      }      
     })
+
+    return deferred.promise;
   }
 
 })
@@ -494,115 +493,81 @@ var app = angular.module('weatherServices', [])
        Checks zip is still current, as this can be called after a server request, within that time 
        the zip could be changed by user. 
     */
-
-    console.log('checking db: ', view);
-
     function loadData(obj, r, _view) {
       obj.progress = false;
       obj.message = wDates.freshWarning(obj.lastUpdated, _view);
-      console.log('load obj: ', _view, ', data length: ', obj.weather.length);
-      console.log('r: ', r);
       obj.weather = r.value[_view].weather;
     }
     
     wDB._get('weather-' + wData.info.zip).then(r => {
       try {
         if(!wDates.isFresh(r.value[view].lastUpdated, view)){
-          console.log('loaded from wDB, view: ', view, ', ts: ', new Date().getSeconds());
           loadData(wData.info[view], r, view);
           (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
         }
       } catch(e) {
-        wData.info[view].weather = {};
-        (view === 'current') ? wData.info.hourly.weather = {} : 0;
-        console.log('catch for checkWDB', view);
         wLog.log('error', 'could not get weather data from indexedDB');
       }
     })
   }
   function refreshCurrent() {
-    // let current     = wData.info.current,
-        // hourly      = wData.info.hourly,
     let validTemp   = /^-?\d+/;
 
-    // current.message = '';
-    // hourly.message  = '';
-    
+    function setSpinners(status) {
+      wData.info.current.progress = status;
+      wData.info.hourly.progress  = status;
+    }
+    function clearMessages() {
+      wData.info.current.message  = '';
+      wData.info.hourly.message   = '';
+    }
+
     if(!wDates.isFresh(wData.info.current.lastUpdated, 'current')){
-      wData.info.current.progress = true;                // start the spinner
-      wData.info.hourly.progress  = true;                // start the spinner
-      console.log('requsting current from server');
-      httpReq('current').then(r => {
-        
+
+      setSpinners(true);
+
+      httpReq('current').then(r => {        
         try {
           if(wData.info.zip === r.data.zip) {
             r.data.lastUpdated[1]--;          // convert from python to JS month.
-            let v0 = r.data.current.temp,     // TESTING
-                v1 = r.data.hourly[0].temp;   // TESTING
-            console.log('got current r.data from server: ', r.data);
-            console.log('current temp: ', v0, ', first hourly temp: ', v1, ', ts: ', new Date().getSeconds());
 
-            if (validTemp.test(r.data.current.temp)) {
-              wData.info.current.message = '';
-              updateView('current', r.data)
-            }
-            if (validTemp.test(r.data.hourly[0].temp)) {
-              wData.info.hourly.message = '';
-              updateView('hourly', r.data)
-            }
-            // validTemp.test(r.data.current.temp) ? updateView('current', r.data) : 0;
-            // validTemp.test(r.data.hourly[0].temp) ? updateView('hourly', r.data) : 0;
-            console.log('saving this to DB, current: ', wData.info);
+            (validTemp.test(r.data.current.temp))   ? updateView('current', r.data) : 0;
+            (validTemp.test(r.data.hourly[0].temp)) ? updateView('hourly', r.data)  : 0;
+
+            clearMessages();
             wDB._put(wData.info.id, wData.info);
           }
         } catch(e) {
           wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
-          // This should happen anyway.
-          // checkWDB('current');
-          // checkWDB('hourly');          
-        } finally {
-          wData.info.current.progress = false;
-          wData.info.hourly.progress  = false;
         }
-        // current.progress  = false;
-        // hourly.progress   = false;
+        setSpinners(false);
     }, e => {
-      console.log('error getting cur/hr data from server, checking local DB');
-      wData.info.current.progress  = false;
-      wData.info.hourly.progress   = false;
-      checkWDB('current');
-      checkWDB('hourly');
+      wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
+      setSpinners(false);
     })
     }
   }
   function refreshTenday() {
     /* Update with server data and display a message if no server data and data is getting stale. */
-    let tenday      = wData.info.tenday,
-        validTemp   = /^-?\d+/;
-
-    tenday.message  = '';
+    let validTemp   = /^-?\d+/;
     
-    if(!wDates.isFresh(tenday.lastUpdated, 'tenday')){
-      tenday.progress = true;                // start the spinner
+    if(!wDates.isFresh(wData.info.tenday.lastUpdated, 'tenday')){
+      wData.info.tenday.progress = true;    // start the spinner
       httpReq('tenday').then(r => {
         try{
-          console.log('10day data: ', r.data);
           if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
-            console.log('passed 10day regex');
             r.data.lastUpdated[1]--;          // convert from python to JS month.
             updateView('tenday', r.data);
+            wData.info.tenday.message   = '';
             wDB._put(wData.info.id, wData.info);
           }
         } catch(e) {
-          console.log('httpReq 10day success, but catch on updatingView', );
-          checkWDB('tenday');
+          wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
         }
-        tenday.progress = false;
+        wData.info.tenday.progress = false;
       }, e => {
-        wLog
-        console.log('error getting 10day data from server, checking local DB');
-        tenday.progress = false;
-        checkWDB('tenday');
+        wLog.log('warning', 'Did not get tenday data from server, online status: ', navigator.onLine);
+        wData.info.tenday.progress = false;
       })
     }
   }
