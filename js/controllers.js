@@ -46,11 +46,11 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       })
     })
   })
-
+/**
   $scope.logData = () => {    // TESTING
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
-    console.log('wDB', wDB);
+    wDB._getAll().then(r => console.log('wDB: ', r))
     wLog.getLogs().then(r => console.log('logs: ', r))
   }
   $scope.downloadWeather = () => {   // TESTING
@@ -62,6 +62,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
+ */
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */
@@ -94,7 +95,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
        is not in the list, be sure not to send server request for 4 char zip code. Maybe 
        server can check for 5 char zip. 
     */
-    (city) ? console.log('running city change: ', city.text) : 0;
     if(city && city.zip !== wData.info.zip){
       newWeatherObj(city).then(r => { 
         weather.refreshForecasts();

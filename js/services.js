@@ -26,7 +26,6 @@ var app = angular.module('weatherServices', [])
 
     return deferred.promise;
   }
-
 })
 .service('wDates', function($filter){
   /**
@@ -35,29 +34,27 @@ var app = angular.module('weatherServices', [])
    */
   this.getLimit     = function(view) {
     var obj = {
-      current:                  1000,   // cache
-      hourly:                   1000,   // cache
-      tenday:                   1000,   // cache
-      // current:            15*60*1000,   // cache
-      // hourly:             15*60*1000,   // cache
-      // tenday:           6*60*60*1000,   // cache
+      current:            15*60*1000,   // cache
+      hourly:             15*60*1000,   // cache
+      tenday:           6*60*60*1000,   // cache
       radar:              20*60*1000,   // cache
       weather_DB:   11*24*60*60*1000,   // removal from indexedDB
-      radar_DB:         4*60*60*1000    // removal from indexedDB
+      radar_DB:         8*60*60*1000    // removal from indexedDB
     };
     return obj[view];
   }
   this.utcFromArr   = function(a) {
+    a = a.length ? a : [2000,0,1,1,1,1];
     var d = new Date(a[0], a[1], a[2], a[3], a[4], a[5]);
     //Setting to local time, date comes from server and is stored in UTC time.
     d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
     return d;
   }
-  this.isFresh      = function(dateArray, view) {
+  this.isExpired    = function(dateArray, view) {
     var limit       = this.getLimit(view),
         now         = Date.now(),
         lastUpdated = this.utcFromArr(dateArray);
-    return now - lastUpdated < limit;
+    return now - lastUpdated > limit;
   }
   this.convStr      = function(s) {
     var d = [];
@@ -72,7 +69,7 @@ var app = angular.module('weatherServices', [])
   }
   this.freshWarning = function(dateArr, view) {
     var message = '', datetime;
-    if(!this.isFresh(dateArr, view)){
+    if(this.isExpired(dateArr, view)){
       datetime  = this.utcFromArr(dateArr);
       message   = 'Last updated: ' + $filter('date')(datetime, 'medium');
     }
@@ -149,23 +146,6 @@ var app = angular.module('weatherServices', [])
         radius  = zoom.toString();
     return ['radar', zip, height, width, radius].join('-')
   };
-  data.removeOld = function() {
-/* This is intended to remove data from wData.info object so that the screen does not display old data while it refreshes from the server. Month is not handled here as it is historical and has no sense of being fresh. Look at controller for month. */
-    var _d = {
-      current: {},
-      hourly:  [],
-      tenday:  [],
-      radar:   {}
-    }, fresh, d = data.info;
-
-    for(let view of Object.keys(_d)){
-      fresh = wDates.isFresh(d[view].lastUpdated, view);
-          
-      if(!fresh){
-        d[view].weather = _d[view];
-      }
-    }
-  }
   data.setRequestView = function() {
     data.info.view = $location.path().substring(1);
     return data.info.view;
@@ -296,7 +276,7 @@ var app = angular.module('weatherServices', [])
     var view, dateArray, request;
     function removeElem(id){
       view += '_DB';
-      if(!wDates.isFresh(dateArray, view)){
+      if(wDates.isExpired(dateArray, view)){
         request = db.transaction(['weather'], 'readwrite')
         .objectStore('weather')
         .delete(id); 
@@ -384,8 +364,7 @@ var app = angular.module('weatherServices', [])
     if (idx > 1 || idx === -1) {
       wDB._put('savedCities', ac.savedCities);
     }
-  }
-  
+  }  
   return ac;
 })
 .service('weather', function($http, $timeout, wData, wDates, wDB, wLog, autocomp){
@@ -501,7 +480,7 @@ var app = angular.module('weatherServices', [])
     
     wDB._get('weather-' + wData.info.zip).then(r => {
       try {
-        if(!wDates.isFresh(r.value[view].lastUpdated, view)){
+        if(wDates.isExpired(r.value[view].lastUpdated, view)){
           loadData(wData.info[view], r, view);
           (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
         }
@@ -521,8 +500,7 @@ var app = angular.module('weatherServices', [])
       wData.info.current.message  = '';
       wData.info.hourly.message   = '';
     }
-
-    if(!wDates.isFresh(wData.info.current.lastUpdated, 'current')){
+    if(wDates.isExpired(wData.info.current.lastUpdated, 'current')){
 
       setSpinners(true);
 
@@ -540,18 +518,22 @@ var app = angular.module('weatherServices', [])
         } catch(e) {
           wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
         }
+
         setSpinners(false);
     }, e => {
       wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
       setSpinners(false);
     })
+    } else{
+      setSpinners(false);
     }
   }
   function refreshTenday() {
     /* Update with server data and display a message if no server data and data is getting stale. */
+
     let validTemp   = /^-?\d+/;
-    
-    if(!wDates.isFresh(wData.info.tenday.lastUpdated, 'tenday')){
+
+    if(wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday')){
       wData.info.tenday.progress = true;    // start the spinner
       httpReq('tenday').then(r => {
         try{
@@ -569,6 +551,8 @@ var app = angular.module('weatherServices', [])
         wLog.log('warning', 'Did not get tenday data from server, online status: ', navigator.onLine);
         wData.info.tenday.progress = false;
       })
+    } else {
+      wData.info.tenday.progress = false;
     }
   }
   function refreshMonth() {
@@ -621,10 +605,10 @@ var app = angular.module('weatherServices', [])
     var radar = wData.info.radar;
     radar.message = '';
 
-    if(!wDates.isFresh(radar.lastUpdated, 'radar')){
+    if(wDates.isExpired(radar.lastUpdated, 'radar')){
       wDB._get(radar.id).then(r => {
         try {
-          if(wDates.isFresh(r.value.lastUpdated, 'radar')){
+          if(wDates.isExpired(r.value.lastUpdated, 'radar')){
             var _r = r.value.weather;
             _r.imgUrl = URL.createObjectURL(_r.img);
             wData.info.radar = r.value;
@@ -645,9 +629,7 @@ var app = angular.module('weatherServices', [])
        (uses lots of limited wu api calls on server) are more on demand. 
     */
     let view  = wData.setRequestView(),
-        limit = 1000;   // Limits how long we wait for http request.
-
-    wData.removeOld();
+        limit = 2000;   // Limits how long we wait for http request.
 
     if(view === 'tenday'){
       refreshTenday();    // generally faster than current, so no timeout reqd.
@@ -658,7 +640,6 @@ var app = angular.module('weatherServices', [])
     } else if(view === 'current' || view === 'hourly'){
       refreshCurrent();
       $timeout(refreshTenday, 300);
-      console.log('hi, refreshing view: ', view);
       $timeout(checkWDB, limit, true, 'tenday');
       $timeout(checkWDB, limit, true, 'current');
       
