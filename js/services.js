@@ -2,6 +2,33 @@
 // add location request to webpage since no api required, also very async.
 
 var app = angular.module('weatherServices', [])
+.service('wLog', function(wDB, $q, $filter){
+  this.log = function(level, value) {
+    // AacceptableKeys = 'error', 'warning' or 'info'
+    wDB._get('logs').then(r => {
+      console.log('logs from wDB, r: ', r);
+      let ts = $filter('date')(Date.now(), 'medium'),
+          logs = (r && r.value) ? r.value : [];
+      logs.push({level: level, timestamp: ts, value: value})
+      logs.splice(100);
+      wDB._put('logs', logs);
+    })
+  }
+  this.getLogs = function() {
+    let deferred = $q.defer();
+
+    wDB._get('logs').then(r => {
+      if (r && r.value) {
+        deferred.resolve(r.value) 
+      } else {
+        deferred.reject({level: 'info', value: 'No logs available'}); 
+      }
+  
+      return deferred.promise;
+    })
+  }
+
+})
 .service('wDates', function($filter){
   /**
    * Dates are stored with UTC time. Beware javascript date function displaying a new 
@@ -300,7 +327,8 @@ var app = angular.module('weatherServices', [])
     setHomeCity:  setHomeCity,
     addCity:      addCity
   };
-  /** Created this setHome flag concept so I could refresh weather using selected city
+  /** 
+   * Created this setHome flag concept so I could refresh weather using selected city
    * which runs after the checkbox function. Checkbox function will alter cities list causing
    * it to refresh weather on wrong city. Now flag allows weather to be retrieved first and list
    * altered second.
@@ -339,19 +367,19 @@ var app = angular.module('weatherServices', [])
     return query ? wuAutocompleteRequest(query) : ac.savedCities;
   }
   function addCity(newCity) {
-    // Add user entered/selected zip to the top of the 'most recent' list
-    // and remove duplicate entry, if it was already in list.
-
-    let max_length  = 15;
-    let home        = ac.savedCities[0];
-    let idx         = ac.savedCities.indexOf(newCity);
+    /**
+     * Add user entered/selected zip to the top of the 'most recent' list
+     * and remove duplicate entry, if it was already in list.
+     */
+    let max_length  = 15,
+        idx         = ac.savedCities.indexOf(newCity);
 
     if (idx > 1) {
       ac.savedCities.splice(idx, 1);
-      ac.savedCities = [home, newCity, ...ac.savedCities.slice(1)]
+      ac.savedCities.splice(1, 0, newCity);
     } else if (idx === -1) {
-      ac.savedCities = [home, newCity, ...ac.savedCities.slice(1)]
-      ac.savedCities = ac.savedCities.slice(0, max_length);
+      ac.savedCities.splice(1, 0, newCity);
+      ac.savedCities.splice(max_length);
     }
 
     if (idx > 1 || idx === -1) {
@@ -361,7 +389,7 @@ var app = angular.module('weatherServices', [])
   
   return ac;
 })
-.service('weather', function($http, $timeout, wData, wDates, wDB, autocomp){
+.service('weather', function($http, $timeout, wData, wDates, wDB, wLog, autocomp){
   function httpReq(view){
     var _url, config = {},
         data = {
@@ -466,58 +494,82 @@ var app = angular.module('weatherServices', [])
        Checks zip is still current, as this can be called after a server request, within that time 
        the zip could be changed by user. 
     */
+
     console.log('checking db: ', view);
-    var obj = wData.info[view];
 
-    // if(!obj.progress && obj.weather){
-    console.log('checking db, if: ', view);
-    obj.message = wDates.freshWarning(obj.lastUpdated, view);
+    function loadData(obj, r, _view) {
+      obj.progress = false;
+      obj.message = wDates.freshWarning(obj.lastUpdated, _view);
+      console.log('load obj: ', _view, ', data length: ', obj.weather.length);
+      console.log('r: ', r);
+      obj.weather = r.value[_view].weather;
+    }
+    
     wDB._get('weather-' + wData.info.zip).then(r => {
-      console.log('wDB result: ', r.value[view].weather);
-      obj.weather = r.value[view].weather;
+      try {
+        if(!wDates.isFresh(r.value[view].lastUpdated, view)){
+          console.log('loaded from wDB, view: ', view, ', ts: ', new Date().getSeconds());
+          loadData(wData.info[view], r, view);
+          (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
+        }
+      } catch(e) {
+        wData.info[view].weather = {};
+        (view === 'current') ? wData.info.hourly.weather = {} : 0;
+        console.log('catch for checkWDB', view);
+        wLog.log('error', 'could not get weather data from indexedDB');
+      }
     })
-
-    // } else if(!obj.progress) {
-    //   console.log('checking db else if: ', view);
-    //   obj.message = 'No ' + view + ' data available';
-    // }
-    console.log('DONE checking db: ', view);
   }
   function refreshCurrent() {
-    var current = wData.info.current,
-        hourly  = wData.info.hourly;
+    // let current     = wData.info.current,
+        // hourly      = wData.info.hourly,
+    let validTemp   = /^-?\d+/;
+
+    // current.message = '';
+    // hourly.message  = '';
     
-    current.message = '';
-    hourly.message  = '';
-    
-    if(!wDates.isFresh(current.lastUpdated, 'current')){
-      current.progress = true;                // start the spinner
-      hourly.progress = true;                 // start the spinner
+    if(!wDates.isFresh(wData.info.current.lastUpdated, 'current')){
+      wData.info.current.progress = true;                // start the spinner
+      wData.info.hourly.progress  = true;                // start the spinner
       console.log('requsting current from server');
       httpReq('current').then(r => {
         
         try {
           if(wData.info.zip === r.data.zip) {
             r.data.lastUpdated[1]--;          // convert from python to JS month.
-            let v0 = r.data.current.temp,
-                v1 = r.data.hourly[0].temp;
+            let v0 = r.data.current.temp,     // TESTING
+                v1 = r.data.hourly[0].temp;   // TESTING
             console.log('got current r.data from server: ', r.data);
-            console.log('current temp: ', v0, ', first hourly temp: ', v1);
-            updateView('current', r.data);
-            updateView('hourly', r.data);
+            console.log('current temp: ', v0, ', first hourly temp: ', v1, ', ts: ', new Date().getSeconds());
+
+            if (validTemp.test(r.data.current.temp)) {
+              wData.info.current.message = '';
+              updateView('current', r.data)
+            }
+            if (validTemp.test(r.data.hourly[0].temp)) {
+              wData.info.hourly.message = '';
+              updateView('hourly', r.data)
+            }
+            // validTemp.test(r.data.current.temp) ? updateView('current', r.data) : 0;
+            // validTemp.test(r.data.hourly[0].temp) ? updateView('hourly', r.data) : 0;
+            console.log('saving this to DB, current: ', wData.info);
             wDB._put(wData.info.id, wData.info);
           }
         } catch(e) {
-          console.log('httpReq cur/hr success, but catch on updatingView', );
-          checkWDB('current');
-          checkWDB('hourly');          
+          wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
+          // This should happen anyway.
+          // checkWDB('current');
+          // checkWDB('hourly');          
+        } finally {
+          wData.info.current.progress = false;
+          wData.info.hourly.progress  = false;
         }
-        current.progress  = false;
-        hourly.progress   = false;
+        // current.progress  = false;
+        // hourly.progress   = false;
     }, e => {
       console.log('error getting cur/hr data from server, checking local DB');
-      current.progress  = false;
-      hourly.progress   = false;
+      wData.info.current.progress  = false;
+      wData.info.hourly.progress   = false;
       checkWDB('current');
       checkWDB('hourly');
     })
@@ -525,14 +577,18 @@ var app = angular.module('weatherServices', [])
   }
   function refreshTenday() {
     /* Update with server data and display a message if no server data and data is getting stale. */
-    var tenday = wData.info.tenday;
-    tenday.message = '';
+    let tenday      = wData.info.tenday,
+        validTemp   = /^-?\d+/;
+
+    tenday.message  = '';
     
     if(!wDates.isFresh(tenday.lastUpdated, 'tenday')){
       tenday.progress = true;                // start the spinner
       httpReq('tenday').then(r => {
         try{
-          if(wData.info.zip === r.data.zip) {
+          console.log('10day data: ', r.data);
+          if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
+            console.log('passed 10day regex');
             r.data.lastUpdated[1]--;          // convert from python to JS month.
             updateView('tenday', r.data);
             wDB._put(wData.info.id, wData.info);
@@ -543,6 +599,7 @@ var app = angular.module('weatherServices', [])
         }
         tenday.progress = false;
       }, e => {
+        wLog
         console.log('error getting 10day data from server, checking local DB');
         tenday.progress = false;
         checkWDB('tenday');
@@ -622,16 +679,23 @@ var app = angular.module('weatherServices', [])
        Expensive calls like radar (filesize / not used as often as other features) and month 
        (uses lots of limited wu api calls on server) are more on demand. 
     */
-    var view = wData.setRequestView();
+    let view  = wData.setRequestView(),
+        limit = 1000;   // Limits how long we wait for http request.
+
     wData.removeOld();
 
     if(view === 'tenday'){
       refreshTenday();    // generally faster than current, so no timeout reqd.
       refreshCurrent();
+      $timeout(checkWDB, limit, true, 'tenday');
+      $timeout(checkWDB, limit, true, 'current');
       
     } else if(view === 'current' || view === 'hourly'){
       refreshCurrent();
       $timeout(refreshTenday, 300);
+      console.log('hi, refreshing view: ', view);
+      $timeout(checkWDB, limit, true, 'tenday');
+      $timeout(checkWDB, limit, true, 'current');
       
     } else if(view === 'radar'){
       // radar has extra DB check, added timeout so radar will still be first 
@@ -639,6 +703,8 @@ var app = angular.module('weatherServices', [])
       refreshRadar();
       $timeout(refreshCurrent, 300);
       $timeout(refreshTenday, 300);
+      $timeout(checkWDB, limit, true, 'current');
+      $timeout(checkWDB, limit, true, 'tenday');
       
     } else {    // Month
     /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */

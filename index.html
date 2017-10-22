@@ -74,7 +74,6 @@
                 Home 
               </span>
               <span class="acHome" style="float:right;">
-                  <!-- ng-click='setHomeFlag($index)' -->
                 <md-checkbox ng-show='$index && !searchText'
                              ng-checked='showChecked($index)'
                              ng-click='setHomeFlag(city)'
@@ -92,6 +91,7 @@
           Version 1.24f - {{main.info.location}} - {{main.info.zip}}
         </p>
         <button ng-click='logData()'>logData</button>
+        <button ng-click='downloadWeather()'>downloadWeather</button>
 
       </div>
     </div>

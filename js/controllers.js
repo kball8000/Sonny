@@ -52,7 +52,15 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     console.log('autocomp: ', autocomp);
     console.log('wDB', wDB);
   }
-
+  $scope.downloadWeather = () => {   // TESTING
+    console.log('downloading weather');
+    let storageObj = wData.info;
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(storageObj));
+    let dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href",     dataStr     );
+    dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
+    dlAnchorElem.click();      
+  }
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */
