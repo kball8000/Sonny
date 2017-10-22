@@ -23,7 +23,7 @@ import s_month
 # debugging
 
 # import random
-import time
+# import time
 # import logging
 
 
@@ -231,8 +231,6 @@ class GetWeather(webapp2.RequestHandler):
 
         info = json.loads(self.request.body)   # weather obj from page
 
-        time.sleep(3)
-      
         forecast_p      = models.Forecast.get_async(info)
         dates           = models.APILock.get()
         temp_date       = dates.pop()
