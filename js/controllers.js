@@ -12,6 +12,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
+  $scope.bnav         = navigator   // TESTING;
+
   $interval(weather.refreshForecasts, 10000);
 
   /* Get the weather data. */
@@ -48,7 +50,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       })
     })
   })
-/**
+// /**
   $scope.logData = () => {    // TESTING
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
@@ -64,7 +66,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
- */
+//  */
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */

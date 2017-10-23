@@ -84,23 +84,21 @@
             </md-item-template>
           </md-autocomplete>
         </form>
-        
+        <div>Online: {{bnav.onLine}}</div>
         <div ng-view></div>
 
         <p id='version' ng-cloak>
-          Version 1.24i - {{main.info.location}} - {{main.info.zip}}
+          Version 1.24j - {{main.info.location}} - {{main.info.zip}}
         </p>
         <!-- TESTING -->
-        <!-- <button ng-click='logData()'>logData</button>
-        <button ng-click='downloadWeather()'>downloadWeather</button> -->
+        <button ng-click='logData()'>logData</button>
+        <button ng-click='downloadWeather()'>downloadWeather</button>
 
       </div>
     </div>
   </body>
   <script>
     /* ServiceWorker requires https or localhost, not file://... */
-    if(navigator.onLine){
-      navigator.serviceWorker.register('/sw.js');
-    }
+    navigator.serviceWorker.register('/sw.js');
   </script>
 </html>

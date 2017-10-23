@@ -100,6 +100,7 @@ var app = angular.module('weatherServices', [])
       weather:      (dict) ? {} : [],
       lastUpdated:  [],     // Store all lastUpdated in UTC time
       message:      '',
+      numLoads:     0,
       progress:     false
     };
   }
@@ -458,15 +459,17 @@ var app = angular.module('weatherServices', [])
       obj.complete = newData.complete;
       obj.weather  = newData.weather;
     } else {    // current / hourly / tenday
-      if(Object.keys(newData).indexOf('error') === -1){
+      let dataError = Object.keys(newData).indexOf('error') !== -1,
+          equalTimestamps = angular.equals(obj.lastUpdated, newData.lastUpdated);
+      if(!dataError && !equalTimestamps){
         obj.weather     = newData[view];
         obj.lastUpdated = newData.lastUpdated;
-      } else {
+        obj.numLoads++;
+      } else if(dataError) {
         obj.message = newData.error;
       }      
     }    
   }
-  // NEED TO REWRITE / RENAME CHECKWDB FUNCTION
   function checkWDB(view) {
     /* Checks indexDB for data before server request and as a fallback if there is a server error. 
        Checks zip is still current, as this can be called after a server request, within that time 
