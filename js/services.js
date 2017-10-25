@@ -44,16 +44,19 @@ var app = angular.module('weatherServices', [])
     return obj[view];
   }
   this.utcFromArr   = function(a) {
-    a = a.length ? a : [2000,0,1,1,1,1];
-    var d = new Date(a[0], a[1], a[2], a[3], a[4], a[5]);
+    let d = a.length ? new Date(a[0], a[1], a[2], a[3], a[4], a[5]) : new Date(0);
     //Setting to local time, date comes from server and is stored in UTC time.
     d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
     return d;
   }
   this.isExpired    = function(dateArray, view) {
-    var limit       = this.getLimit(view),
-        now         = Date.now(),
-        lastUpdated = this.utcFromArr(dateArray).valueOf();
+    let limit       = this.getLimit(view),
+        now         = new Date();
+        lastUpdated;
+    
+    dateArray   = dateArray.length ? dateArray : [2000,0,1,0,0,0];
+    lastUpdated = this.utcFromArr(dateArray);
+
     return now - lastUpdated > limit;
   }
   this.convStr      = function(s) {
@@ -476,25 +479,40 @@ var app = angular.module('weatherServices', [])
        Checks zip is still current, as this can be called after a server request, within that time 
        the zip could be changed by user. 
     */
+
+    let validTempRe = /^-?\d+/,
+        validTemp;
+
+    if (view === 'current') {
+      validTemp = validTempRe.test(wData.info.current.temp);
+    } else if (view === 'hourly') {
+      validTemp = validTempRe.test(wData.info.hourly[0].temp);
+    } else if (view === 'tenday') {
+      validTemp = validTempRe.test(wData.info.tenday[0].high);
+    }
+
     function loadData(obj, r, _view) {
       obj.progress = false;
       obj.message = wDates.freshWarning(obj.lastUpdated, _view);
       obj.weather = r.value[_view].weather;
     }
     
-    wDB._get('weather-' + wData.info.zip).then(r => {
-      try {
-        if(wDates.isExpired(r.value[view].lastUpdated, view)){
-          loadData(wData.info[view], r, view);
-          (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
+    if (!validTemp) {
+      wDB._get('weather-' + wData.info.zip).then(r => {
+        try {
+          if(wDates.isExpired(r.value[view].lastUpdated, view)){
+            loadData(wData.info[view], r, view);
+            (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
+          }
+        } catch(e) {
+          wLog.log('error', 'could not get weather data from indexedDB');
         }
-      } catch(e) {
-        wLog.log('error', 'could not get weather data from indexedDB');
-      }
-    })
+      })  
+    }
   }
   function refreshCurrent() {
-    let validTemp   = /^-?\d+/;
+    let validTemp = /^-?\d+/,
+        expired   = wDates.isExpired(wData.info.current.lastUpdated, 'current');
 
     function setSpinners(status) {
       wData.info.current.progress = status;
@@ -504,9 +522,10 @@ var app = angular.module('weatherServices', [])
       wData.info.current.message  = '';
       wData.info.hourly.message   = '';
     }
-    if(wDates.isExpired(wData.info.current.lastUpdated, 'current')){
 
-      setSpinners(true);
+    if(expired){
+
+      wData.numLoads ? 0 : setSpinners(true);
 
       httpReq('current').then(r => {        
         try {
@@ -539,7 +558,8 @@ var app = angular.module('weatherServices', [])
     let validTemp   = /^-?\d+/;
 
     if(wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday')){
-      wData.info.tenday.progress = true;    // start the spinner
+      // wData.info.tenday.progress = true;    // start the spinner
+      wData.info.tenday.progress = !wData.numLoads;    // TESTING new spinner scheme
       httpReq('tenday').then(r => {
         try{
           if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
