@@ -80,6 +80,8 @@ var app = angular.module('weatherServices', [])
  /* This object is the main object displayed. It is common / reused among the different pages, i.e. current / hourly... data object contains all weather info per zip code. */
   
   var data = {};
+
+  data.numLoads = 0;  // TESTING, increments on refreshCurrent.
   
   data.createWeatherObj = function(city) {
     this.view     = ''; // Current page or request, i.e. current, tenday
@@ -100,7 +102,6 @@ var app = angular.module('weatherServices', [])
       weather:      (dict) ? {} : [],
       lastUpdated:  [],     // Store all lastUpdated in UTC time
       message:      '',
-      numLoads:     0,
       progress:     false
     };
   }
@@ -510,6 +511,7 @@ var app = angular.module('weatherServices', [])
       httpReq('current').then(r => {        
         try {
           if(wData.info.zip === r.data.zip) {
+            wData.numLoads++;   // TESTING
             r.data.lastUpdated[1]--;          // convert from python to JS month.
 
             (validTemp.test(r.data.current.temp))   ? updateView('current', r.data) : 0;
