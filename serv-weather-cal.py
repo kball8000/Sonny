@@ -23,8 +23,8 @@ import s_month
 # debugging
 
 # import random
-# import time
-# import logging
+import time
+import logging
 
 
 # Classes for server objects and their methods    
@@ -234,6 +234,10 @@ class GetWeather(webapp2.RequestHandler):
         forecast_p      = models.Forecast.get_async(info)
         dates           = models.APILock.get()
         temp_date       = dates.pop()
+
+        logging.info('just about to sleep')
+        time.sleep(2)
+        logging.info('just DONE to sleep')
 
         if s_utils.api_calls_avail(dates):
             forecast = forecast_p.get_result()

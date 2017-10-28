@@ -1,11 +1,11 @@
 <div ng-controller='hourlyCtrl'>
   <div layout="row" layout-sm="column" layout-align="space-around">
-    <md-progress-circular ng-show='o.info.hourly.progress' 
+    <md-progress-circular ng-show='o.info.hourly.spinner' 
                           md-mode="indeterminate">
     </md-progress-circular>
   </div>
   
-  <div ng-show='!o.info.hourly.progress'>
+  <div ng-show='!o.info.hourly.spinner'>
     <p ng-show='o.info.hourly.message'> {{o.info.hourly.message}} </p>
     <ul class='list-group'>
       <li class="s-li list-group-item" ng-repeat='hour in o.info.hourly.weather'>

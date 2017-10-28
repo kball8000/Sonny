@@ -1,12 +1,12 @@
 <div id='radar' ng-controller='radarCtrl'>
   <div layout="row" layout-sm="column" layout-align="space-around">
-    <md-progress-circular ng-show='o.info.radar.progress' 
+    <md-progress-circular ng-show='o.info.radar.spinner' 
                           md-mode="indeterminate">
     </md-progress-circular>
   </div>
   <p ng-show='o.info.radar.message'> {{o.info.radar.message}} </p>
   <img ng-src='{{o.info.radar.weather.imgUrl}}' 
-       ng-show='!o.info.radar.progress && o.info.radar.weather.img'/>
+       ng-show='!o.info.radar.spinner && o.info.radar.weather.img'/>
   <md-button class='md-raised radar-button radar-plus'
              ng-disabled="o.info.radar.zoom <= 50"
              ng-click='zoom(true)'>

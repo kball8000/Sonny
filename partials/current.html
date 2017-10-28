@@ -1,13 +1,13 @@
 <div ng-controller='currentCtrl'>
   <!--    Spinner    -->
   <div layout="row" layout-sm="column" layout-align="space-around">
-    <md-progress-circular ng-show='o.info.current.progress' 
+    <md-progress-circular ng-show='o.info.current.spinner' 
                           md-mode="indeterminate">
     </md-progress-circular>
   </div>
   
   <!--    Current Forecast / Conditions    -->
-  <div ng-show='!o.info.current.progress'>
+  <div ng-show='!o.info.current.spinner'>
     <p ng-show='o.info.current.message'> {{o.info.current.message}} </p>
     <!-- TESTING -->
     <!-- <p>NumLoads: {{o.info.current.numLoads}}</p>     -->

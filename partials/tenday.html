@@ -1,11 +1,11 @@
 <div ng-controller='tendayCtrl'>
   <div layout="row" layout-sm="column" layout-align="space-around">
-    <md-progress-circular ng-show='o.info.tenday.progress' 
+    <md-progress-circular ng-show='o.info.tenday.spinner' 
                           md-mode="indeterminate">
     </md-progress-circular>
   </div>
   
-  <div ng-show='!o.info.tenday.progress'>
+  <div ng-show='!o.info.tenday.spinner'>
     <p ng-show='o.info.tenday.message'>{{o.info.tenday.message}}</p>
     <ul class="list-group">
       <li class="list-group-item" 
