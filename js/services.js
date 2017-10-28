@@ -49,6 +49,9 @@ var app = angular.module('weatherServices', [])
     d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
     return d;
   }
+  this.isNewer      = function(arr0, arr1) {
+    return this.utcFromArr(arr0) > this.utcFromArr(arr1);
+  }
   this.recentCheck  = function(timestamp, view) {
     let now = Date.now(),
     limit = 100000;      // TESTING
@@ -423,46 +426,53 @@ var app = angular.module('weatherServices', [])
     return obj;
   } 
   function requestRadar(radar) {
+    let expiredData = wDates.isExpired(wData.info.radar.lastUpdated, 'radar'),
+        recentCheck = wDates.recentCheck(wData.info.radar.lastChecked, 'radar');
+
+    wData.info.radar.lastChecked = Date.now();
+
+    if(expiredData){
+
+      // Stops spinner from going all the time on a bad network connection / slow device.
+      wData.info.radar.spinner = !recentCheck;
     
-    var radar = wData.info.radar;
-    radar.spinner = true;
-    
-    httpReq('radar').then(r => {
-      try {
-        if(!r.headers('X-Werror')){
-          let _id = r.headers('X-Wid'),
-              lastUpdated = wDates.convStr(r.headers('X-Wdate'));
-          console.log('received radar, id: ', _id, ', lastUpdated: ', lastUpdated);
-          if(_id === wData.info.radar.id) {
-            console.log('going to update radar view with r: ', r);
-            updateView('radar', r);
-            wDB._put(wData.info.id, wData.info);
-            wDB._put(radar.id, radar);
-          } else {  // user is no longer waiting on this image, cache for later.
-            var zip       = _id.substr(6,5),
-                radarObj  = createTempRadarObj(r, zip);
-            wDB._put(_id, radarObj);
-          } 
-        } else {
-          radar.message = r.headers('X-Werror');
-        }
-      } catch(e) {
-        radar.message = 'error processing successful server data from wu';        
-      }
-      radar.spinner = false;
-    }, e => {
-      radar.spinner = false;        
-      wDB._get(radar.id).then(r => {
+      httpReq('radar').then(r => {
         try {
-          // DUPLICATE CODE HERE AND INITIAL DB REQUEST, NEXT 2 LINES.
-          var _r = r.value.weather;
-          _r.imgUrl = URL.createObjectURL(_r.img);
-          wData.info.radar = r.value;
+          if(!r.headers('X-Werror')){
+            let _id = r.headers('X-Wid'),
+                lastUpdated = wDates.convStr(r.headers('X-Wdate'));
+            console.log('received radar, id: ', _id, ', lastUpdated: ', lastUpdated);
+            if(_id === wData.info.radar.id) {
+              console.log('going to update radar view with r: ', r);
+              updateView('radar', r);
+              wDB._put(wData.info.id, wData.info);
+              wDB._put(radar.id, radar);
+            } else {  // user is no longer waiting on this image, cache for later.
+              var zip       = _id.substr(6,5),
+                  radarObj  = createTempRadarObj(r, zip);
+              wDB._put(_id, radarObj);
+            } 
+          } else {
+            radar.message = r.headers('X-Werror');
+          }
         } catch(e) {
-          radar.message = 'no data available';
+          radar.message = 'error processing successful server data from wu';        
         }
+        radar.spinner = false;
+      }, e => {
+        radar.spinner = false;        
+        wDB._get(radar.id).then(r => {
+          try {
+            // DUPLICATE CODE HERE AND INITIAL DB REQUEST, NEXT 2 LINES.
+            var _r = r.value.weather;
+            _r.imgUrl = URL.createObjectURL(_r.img);
+            wData.info.radar = r.value;
+          } catch(e) {
+            radar.message = 'no data available';
+          }
+        })
       })
-    })            
+    }
   }
   function updateView(view, newData) {
     // This function is intended to be wrapped in a try/catch above it.
@@ -478,11 +488,11 @@ var app = angular.module('weatherServices', [])
       obj.weather  = newData.weather;
     } else {    // current / hourly / tenday
       let dataError = Object.keys(newData).indexOf('error') !== -1,
+          // equalTimestamps is a bit of belt and suspenders.
           equalTimestamps = angular.equals(obj.lastUpdated, newData.lastUpdated);
       if(!dataError && !equalTimestamps){
         obj.weather     = newData[view];
         obj.lastUpdated = newData.lastUpdated;
-        obj.numLoads++;
       } else if(dataError) {
         obj.message = newData.error;
       }      
@@ -506,7 +516,8 @@ var app = angular.module('weatherServices', [])
     }
 
     function loadData(obj, r, _view) {
-      obj.spinner = false;
+      // for slow network connections, turn off spinner if httpReq is still going.
+      obj.spinner = false;    
       obj.message = wDates.freshWarning(obj.lastUpdated, _view);
       obj.weather = r.value[_view].weather;
     }
@@ -514,7 +525,8 @@ var app = angular.module('weatherServices', [])
     if (!validTemp) {
       wDB._get('weather-' + wData.info.zip).then(r => {
         try {
-          if(wDates.isExpired(r.value[view].lastUpdated, view)){
+          // Insuring newer data was not written to page while waiting on wDB retrieval.
+          if(wDates.isNewer(r.value[view].lastUpdated, wData.info[view].lastUpdated)) {
             loadData(wData.info[view], r, view);
             (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
           }
@@ -529,9 +541,6 @@ var app = angular.module('weatherServices', [])
         expiredData = wDates.isExpired(wData.info.current.lastUpdated, 'current'),
         recentCheck = wDates.recentCheck(wData.info.current.lastChecked, 'current');
 
-    wData.info.current.lastChecked = Date.now();  
-    console.log('expiredData: ', expiredData, ', recentCheck: ', recentCheck);
-    console.log('HIIIII, whole new line, recentCheck', recentCheck);
     function setSpinners(status) {
       wData.info.current.spinner = status;
       wData.info.hourly.spinner  = status;
@@ -541,10 +550,12 @@ var app = angular.module('weatherServices', [])
       wData.info.hourly.message   = '';
     }
 
+    wData.info.current.lastChecked = Date.now();
+
     if(expiredData){
 
-      recentCheck ? 0 : setSpinners(true);
-      
+      // Stops spinner from going all the time on a bad network connection / slow device.      
+      !recentCheck ? setSpinners(true) : 0;
 
       httpReq('current').then(r => { 
         try {
@@ -552,8 +563,8 @@ var app = angular.module('weatherServices', [])
             wData.numLoads++;   // TESTING
             r.data.lastUpdated[1]--;          // convert from python to JS month.
 
-            (validTemp.test(r.data.current.temp))   ? updateView('current', r.data) : 0;
-            (validTemp.test(r.data.hourly[0].temp)) ? updateView('hourly', r.data)  : 0;
+            validTemp.test(r.data.current.temp)   ? updateView('current', r.data) : 0;
+            validTemp.test(r.data.hourly[0].temp) ? updateView('hourly', r.data)  : 0;
 
             clearMessages();
             wDB._put(wData.info.id, wData.info);
@@ -563,30 +574,30 @@ var app = angular.module('weatherServices', [])
         }
 
         setSpinners(false);
+
     }, e => {
       wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
       setSpinners(false);
     })
-    } else{
-      setSpinners(false);
     }
   }
   function refreshTenday() {
-    /* Update with server data and display a message if no server data and data is getting stale. */
+    /**
+     * Update with server data and display a message if no server data and data is getting stale.
+     */
 
     let validTemp   = /^-?\d+/,
         expiredData = wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday'),
         recentCheck = wDates.recentCheck(wData.info.tenday.lastChecked, 'tenday');
 
     wData.info.tenday.lastChecked = Date.now();
-        // if(wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday')){
+
     if(expiredData){
-      // wData.info.tenday.spinner = true;    // start the spinner
-      // wData.info.tenday.spinner = !wData.numLoads;    // TESTING new spinner scheme
+
+      // Stops spinner from going all the time on a bad network connection / slow device.
       wData.info.tenday.spinner = !recentCheck;
 
       httpReq('tenday').then(r => {
-        wData.info.tenday.lastChecked = Date.now();
         try{
           if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
             r.data.lastUpdated[1]--;          // convert from python to JS month.
@@ -605,6 +616,9 @@ var app = angular.module('weatherServices', [])
     }
   }
   function refreshMonth() {
+
+    // ADD EXPIRED STUFF HERE TO AVOID FLASHING SCREEN ???
+
     function convert_month(month){
       /* for each day in the calendar convert the month val from wu/python to JS. */
       for(let week of month.weather.cal) {
