@@ -32,7 +32,7 @@ var app = angular.module('weatherServices', [])
    * Dates are stored with UTC time. Beware javascript date function displaying a new 
    * date in local time.
    */
-  this.getLimit     = function(view) {
+  function getLimit(view) {
     var obj = {
       current:            15*60*1000,   // cache
       hourly:             15*60*1000,   // cache
@@ -43,30 +43,30 @@ var app = angular.module('weatherServices', [])
     };
     return obj[view];
   }
-  this.utcFromArr   = function(a) {
+  function utcFromArr(a) {
     let d = a.length ? new Date(a[0], a[1], a[2], a[3], a[4], a[5]) : new Date(0);
     //Setting to local time, date comes from server and is stored in UTC time.
     d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
     return d;
   }
   this.isNewer      = function(arr0, arr1) {
-    return this.utcFromArr(arr0) > this.utcFromArr(arr1);
+    return utcFromArr(arr0) > utcFromArr(arr1);
   }
   this.recentCheck  = function(timestamp, view) {
     timestamp = timestamp || 0;
     let now   = Date.now(),
         // 2x stops spinner from running just because we at limit, but it has really been a while.
-        limit = 2*(this.getLimit(view));
+        limit = 2*(getLimit(view));
 
     return now - timestamp < limit;
   }
   this.isExpired    = function(dateArr, view) {
-    let limit       = this.getLimit(view),
+    let limit       = getLimit(view),
         now         = new Date(),
         lastUpdated;
         
     dateArr     = (dateArr && dateArr.length) ? dateArr : [2000,0,1,0,0,0];
-    lastUpdated = this.utcFromArr(dateArr);
+    lastUpdated = utcFromArr(dateArr);
 
     return now - lastUpdated > limit;
   }
@@ -84,7 +84,7 @@ var app = angular.module('weatherServices', [])
   this.freshWarning = function(dateArr, view) {
     var message = '', datetime;
     if(this.isExpired(dateArr, view)){
-      datetime  = this.utcFromArr(dateArr);
+      datetime  = utcFromArr(dateArr);
       message   = 'Last updated: ' + $filter('date')(datetime, 'medium');
     }
     return message;    
@@ -195,8 +195,11 @@ var app = angular.module('weatherServices', [])
       }
     }
   }
-  data.updateFreshnessMsg = function() {
-    let views = ['current', 'hourly', 'tenday', 'radar'];
+  data.updateFreshnessMsg = function(_view) {
+    /**
+     * Will update an individual view if requested, otherwise all views.
+     */
+    let views = _view ? [_view] : ['current', 'hourly', 'tenday', 'radar'];
 
     for(let i in views) {
       let view  = views[i],
@@ -456,36 +459,27 @@ var app = angular.module('weatherServices', [])
       httpReq('radar').then(r => {
         try {
           if(!r.headers('X-Werror')){
-            var _id = r.headers('X-Wid');
+            let _id = r.headers('X-Wid');
             if(_id === wData.info.radar.id){
               updateView('radar', r);
               wDB._put(wData.info.id, wData.info);
-              wDB._put(radar.id, radar);
+              wDB._put(wData.info.radar.id, wData.info.radar);
             } else {
-              var zip       = _id.substr(6,5),
+              let zip       = _id.substr(6,5),
                   radarObj  = createTempRadarObj(r, zip);
               wDB._put(_id, radarObj);
             } 
           } else {
-            radar.message = r.headers('X-Werror');
+            wData.info.radar.message = r.headers('X-Werror');
           }
-          radar.progress = false;
         } catch(e) {
-          radar.message = 'error processing successful server data from wu';
-          radar.progress = false;        
-        } 
+          wData.info.radar.message = 'error processing successful server radar image from wu';
+        }
+        wData.info.radar.spinner = false;
       }, e => {
-        radar.progress = false;        
-        wDB._get(radar.id).then(r => {
-          try {
-            // DUPLICATE CODE HERE AND INITIAL DB REQUEST, NEXT 2 LINES.
-            var _r = r.value.weather;
-            _r.imgUrl = URL.createObjectURL(_r.img);
-            wData.info.radar = r.value;
-          } catch(e) {
-            radar.message = 'no data available';
-          }
-        })
+        wData.info.radar.progress = false;
+        wData.info.radar.message  = 'Error getting Radar image from server!';
+        wLog.log('warning', 'Did not get radar image from server, online status: ', navigator.onLine);
       })
     }
   }
@@ -512,44 +506,6 @@ var app = angular.module('weatherServices', [])
         obj.message = newData.error;
       }      
     }    
-  }
-  function checkWDB(view) {
-    /* Checks indexDB for data before server request and as a fallback if there is a server error. 
-       Checks zip is still current, as this can be called after a server request, within that time 
-       the zip could be changed by user. 
-    */
-
-    let validTempRe = /^-?\d+/,
-        test0, test1, validTemp;
-
-    if (view === 'current') {
-      test0 = validTempRe.test(wData.info.current.weather.temp);
-      test1 = validTempRe.test(wData.info.hourly.weather[0].temp);
-      validTemp = test0 && test1;      
-    } else if (view === 'tenday') {
-      validTemp = validTempRe.test(wData.info.tenday.weather[0].high);
-    }
-
-    function loadData(obj, r, _view) {
-      // for slow network connections, turn off spinner if httpReq is still going.
-      obj.spinner = false;    
-      obj.message = wDates.freshWarning(obj.lastUpdated, _view);
-      obj.weather = r.value[_view].weather;
-    }
-    
-    if (!validTemp) {
-      wDB._get('weather-' + wData.info.zip).then(r => {
-        try {
-          // Insuring newer data was not written to page while waiting on wDB retrieval.
-          if(wDates.isNewer(r.value[view].lastUpdated, wData.info[view].lastUpdated)) {
-            loadData(wData.info[view], r, view);
-            (view === 'current') ? loadData(wData.info.hourly, r, 'hourly') : 0;
-          }
-        } catch(e) {
-          wLog.log('error', 'could not get weather data from indexedDB');
-        }
-      })  
-    }
   }
   function refreshCurrent() {
     let expiredData = wDates.isExpired(wData.info.current.lastUpdated, 'current'),
@@ -691,12 +647,14 @@ var app = angular.module('weatherServices', [])
      * On each refreshRadar, check local first to see if the individual image is stored separate from
      * the main object and display if so, otherwise, request from server.
      */
+
+    // This is flakey on starup, but seems ok afterwards.
     wDB._get(wData.info.radar.id).then(r => {
       try {
         // super slight bug, if zip changed since image was request from wDB, we have wrong image
         r.value.weather.imgUrl = URL.createObjectURL(r.value.weather.img);
-        wData.info.radar = r.value;
-        wData.info.radar.message = wDates.freshWarning(wData.info.radar.lastUpdated, 'radar');
+        wData.info.radar       = r.value;
+        wData.updateFreshnessMsg('radar');
       } catch(e) {
         requestRadar(radar);
       }
