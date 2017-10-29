@@ -84,8 +84,6 @@
             </md-item-template>
           </md-autocomplete>
         </form>
-        <div>Online: {{bnav.onLine}}</div>
-        <div>numLoads: {{main.numLoads}}</div>
         <div ng-view></div>
 
         <p id='version' ng-cloak>
@@ -100,7 +98,6 @@
   </body>
   <script>
     /* ServiceWorker requires https or localhost, not file://... */
-    console.log('new INDEX.HTML FILE');
     navigator.serviceWorker.register('/sw.js');
   </script>
 </html>

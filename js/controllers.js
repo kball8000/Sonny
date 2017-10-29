@@ -12,45 +12,54 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
-  $scope.bnav         = navigator   // TESTING;
+  wData.t0 = performance.now();
 
   $interval(weather.refreshForecasts, 10000);
 
   /* Get the weather data. */
-  function newWeatherObj(city) {
-    /* if it exists, retrieves from indexedDB or creates a new weather object to display */
-    var _id =       'weather-' + city.zip, 
-        deferred =  $q.defer();
-    
+  function cancelMonthTimeouts() {
+    /**
+     * Just in case there are pending month timeouts. Maybe overkill, I guess they could just fizzle
+     * out on their own.
+     */
     try {
       $timeout.cancel(wData.info.month.timeout);
-    } finally {
-      wDB._get(_id).then(r => {
-        wData.info = r ? r.value : new wData.createWeatherObj(city);
-        deferred.resolve();
-      })
-      return deferred.promise;
+    } catch (e){
+      angular.noop();
+    }    
+  }
+  function loadCityList(r) {
+    if (r && r.value) {
+      autocomp.savedCities  = r.value;
+    } else{
+      autocomp.initializeCities();
     }
   }
-  wDB.openDB().then(r => {
-    wDB._get('savedCities').then( r => {
-      if (r) {
-        autocomp.savedCities  = r.value;
-      } else{
-        var initCities = [
-          {zip: '61601', text: 'Peoria, Illinois'},
-          {zip: '45201', text: 'Cincinnati, Ohio'},
-          {zip: '37501', text: 'Memphis, Tennessee'}
-        ];
-        autocomp.savedCities  = initCities;
-        wDB._put('savedCities', initCities);
-      }
-      newWeatherObj(autocomp.savedCities[0]).then(r => { 
-        wDB.setLoaded(); 
-      })
+  function changeCity(city, initialLoad) {
+    let _id = 'weather-' + city.zip;
+
+    cancelMonthTimeouts();
+
+    wData.info.zip = city.zip;
+    weather.refreshForecasts();     // fire off server request.
+
+    wDB._get(_id).then(r => {       // load local data.      
+      wData.info = r ? r.value : new wData.createWeatherObj(city);
+      wData.updateFreshnessMsg();
+      if (initialLoad) {
+        wDB.setLoaded();
+      };
+    })
+  }
+
+  // Load the app data.
+  wDB.openDB().then(() => {
+    wDB._get('savedCities').then( cities => {
+      loadCityList(cities);
+      let homeCity = autocomp.savedCities[0];
+      changeCity(homeCity, true);
     })
   })
-// /**
   $scope.logData = () => {    // TESTING
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
@@ -66,7 +75,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
-//  */
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */
@@ -75,9 +83,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       let newZip = query,
           url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&query=' + newZip;
       
-      newWeatherObj({zip: newZip, text: ''}).then(r => {
-        weather.refreshForecasts();
-      })
+      changeCity({zip: newZip, text: ''});
       
       $http.jsonp(url).then( r => {
         let c           = r.data.RESULTS[0],
@@ -100,9 +106,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
        server can check for 5 char zip. 
     */
     if(city && city.zip !== wData.info.zip){
-      newWeatherObj(city).then(r => { 
-        weather.refreshForecasts();
-      })
+      changeCity(city);
       
       autocomp.addCity(city);
       $scope.searchText = '';
@@ -216,15 +220,14 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   })
 })
 .controller('radarCtrl', function($scope, wDB, wData, weather) {
-  function getRadar(){
-    wDB.waitFor('loaded').then(r => {
-      $scope.o  = wData;
-      weather.refreshForecasts();
-    })
+  wDB.waitFor('loaded').then(r => {
+    $scope.o  = wData;
+    weather.refreshForecasts();
+  })
+  $scope.zoom = function(_in){
+    // _in: true = zoom in, false = zoom out.
+    wData.setZoom(_in);
+    wData.updateRadarId();
+    weather.refreshForecasts();
   }
-  $scope.zoom = function(z){
-    wData.zoom(z);
-    getRadar();
-  }
-  getRadar(); 
 });

@@ -7,6 +7,11 @@ let CACHE_NAME = 'sonny-v1.24l';
  */
 let urlsToCache = [
     '/',
+    '/current',
+    '/hourly',
+    '/tenday',
+    '/radar',
+    '/month',
     '/css/sonny.css',
     '/favicon.ico',
     '/js/controllers.js',
@@ -47,8 +52,6 @@ self.addEventListener('activate', function(event){
   );
 });
 
-console.log('this: ', this);
-console.log('self: ', self);
 // Returns file from cache for a fetch/GET request, not POST, as POST is not supported
 // Helpful document: https://developers.google.com/web/fundamentals/primers/service-workers/
 self.addEventListener('fetch', function(event) {  
