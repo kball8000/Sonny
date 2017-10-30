@@ -130,13 +130,14 @@ var app = angular.module('weatherServices', [])
   }
   data.createRadarObj     = function(zip, zoom) {
     zoom = zoom || 200;
+
     return {
-      weather:      {}, //img, imgUrl, imgId
-      lastUpdated:  0, // Store timestamps as seconds since epoch, i.e. 1970.
-      lastChecked:  0,
       id:           data.createRadarId(zip, zoom),
-      spinner:     false,
-      zoom:         zoom
+      lastChecked:  0,
+      lastUpdated:  0,    // Store timestamps as seconds since epoch, i.e. 1970.
+      spinner:      false,
+      weather:      {},   // id, img, imgUrl, zoom
+      zoom:         zoom  //
     };
     
   }
@@ -423,6 +424,12 @@ var app = angular.module('weatherServices', [])
     return $http.post(url, data, config); 
   }
   function createTempRadarObj(r, zip) {
+
+    /** 
+     * DO A SPLIT BY DASH, THEN ARR[1] WILL BE ZIP AND ARR[4] WILL BE ZOOM.
+     * NO NEED TO PASS IN ZIP, GET IT HERE.
+     */
+
     var str   = r.headers('X-Wid'),
         idx   = str.lastIndexOf('-'),
         zoom  = str.substr(idx+1);
@@ -444,6 +451,11 @@ var app = angular.module('weatherServices', [])
 
       httpReq('radar').then(r => {
         try {
+
+          // WORKING HERE. IDEA: CREATE A RADAR OBJ, PUT 1 IN DB, 1 IN WDATA.INFO.RADAR.WEATHER.
+          // THAT GETS RID OF THIS R.HEADER(X-Wid) UGLINESS, IT'LL BE OBJ.ID LIKE EVERYWHERE ELSE.
+          // MAY JUST NEED TO DUPLICATE LAST UPDATED TO WDATA.INFO.RADAR.LASTUPDATED...
+
           if(!r.headers('X-Werror')){
             let _id = r.headers('X-Wid');
             if(_id === wData.info.radar.id){
@@ -451,7 +463,15 @@ var app = angular.module('weatherServices', [])
               wDB._put(wData.info.id, wData.info);
               wDB._put(wData.info.radar.id, wData.info.radar);
             } else {
-              let zip       = _id.substr(6,5),
+              /**
+               * SEEMS LIKE LET ZIP SHOULD BE A PART OF THE NEW CREATE OBJ IN THE BEGINNING.
+               * STORING TOO MUCH IN THE INDIVIDUAL RADAR CACHE, JUST THE 'WEATHER' PORTION OF THE OBJ.
+               * ONLY ID, IMGURL, IMG, ZIP, ZOOM.
+               * WILL NEED TO FIX ANYWHERE I PULL IT OUT OF WDB TO HANDLE IT CORRECTLY.
+               * MOVE LAST UPDATED TO 'WEATHER OBJ'.
+               */ 
+
+              let zip       = _id.substr(6,5),    
                   radarObj  = createTempRadarObj(r, zip);
               wDB._put(_id, radarObj);
             } 
@@ -476,6 +496,9 @@ var app = angular.module('weatherServices', [])
     if(view === 'radar') {
       obj.weather.img     = newData.data;
       obj.weather.imgUrl  = URL.createObjectURL(obj.weather.img);
+
+      // WORKING HERE, ADD OBJ.WEATHER.LASTUPDATED???
+
       obj.lastUpdated     = wDates.convStr(newData.headers('X-Wdate'));
       
     } else if(view === 'month') {
