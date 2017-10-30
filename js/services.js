@@ -436,30 +436,20 @@ var app = angular.module('weatherServices', [])
     let expiredData = wDates.isExpired(wData.info.radar.lastUpdated, 'radar'),
         recentCheck = wDates.recentCheck(wData.info.radar.lastChecked, 'radar');
 
-    console.log('requestRadar, expiredData: ', expiredData, ', recentCheck: ', recentCheck);
     wData.info.radar.lastChecked = Date.now();
         
     if(expiredData){
 
       wData.info.radar.spinner = !recentCheck;
 
-      console.log('firing off RADAR weather request since it is expired');
       httpReq('radar').then(r => {
-        console.log('requestRadar, r: ', r);
         try {
-          console.log('requestRadar TRY');
           if(!r.headers('X-Werror')){
-            console.log('requestRadar no error');
             let _id = r.headers('X-Wid');
-            console.log('requestRadar, id:', _id);
             if(_id === wData.info.radar.id){
-              console.log('requestRadar, same ID, will update view');
               updateView('radar', r);
-              console.log('requestRadar, same ID, updated view');
               wDB._put(wData.info.id, wData.info);
-              console.log('requestRadar, saved wData');
               wDB._put(wData.info.radar.id, wData.info.radar);
-              console.log('requestRadar, saved individual radar');              
             } else {
               let zip       = _id.substr(6,5),
                   radarObj  = createTempRadarObj(r, zip);
@@ -484,13 +474,9 @@ var app = angular.module('weatherServices', [])
     var obj = wData.info[view];
 
     if(view === 'radar') {
-      console.log('updateView, setting img');
       obj.weather.img     = newData.data;
-      console.log('updateView, setting imgURL');
       obj.weather.imgUrl  = URL.createObjectURL(obj.weather.img);
-      console.log('updateView, setting LU: ', wDates.convStr(newData.headers('X-Wdate')));
       obj.lastUpdated     = wDates.convStr(newData.headers('X-Wdate'));
-      console.log('updateView, DONE radar');
       
     } else if(view === 'month') {
       /* Only setting these 2 params, the rest should match because of id check in refresh radar.*/
@@ -525,7 +511,6 @@ var app = angular.module('weatherServices', [])
       // Stops spinner from going all the time on a bad network connection / slow device.      
       !recentCheck ? setSpinners(true) : 0;
 
-      console.log('firing off CURRENT weather request since it is expired');
       httpReq('current').then(r => { 
         try {
           let validTemp = /^-?\d+/;
@@ -565,7 +550,6 @@ var app = angular.module('weatherServices', [])
       // Stops spinner from going all the time on a bad network connection / slow device.
       wData.info.tenday.spinner = !recentCheck;
 
-      console.log('firing off TENDAY weather request since it is expired');
       httpReq('tenday').then(r => {
         let validTemp   = /^-?\d+/;
         try{
@@ -641,14 +625,12 @@ var app = angular.module('weatherServices', [])
      */
 
     // This is flakey on startup, but seems ok afterwards.
-    console.log('refreshRadar,start, id: ', wData.info.radar.id);
     wDB._get(wData.info.radar.id).then(r => {
       try {
         // super slight bug, if zip changed since image was request from wDB, we have wrong image
         r.value.weather.imgUrl = URL.createObjectURL(r.value.weather.img);
         wData.info.radar       = r.value;
         wData.updateFreshnessMsg('radar');
-        console.log('refreshRadar, update complete');  
       } catch(e) {
         angular.noop();
         // requestRadar(radar);
@@ -677,8 +659,8 @@ var app = angular.module('weatherServices', [])
       // Radar has extra DB check, added timeout so radar will still be first 
       // request to wu and first dibs if api calls available is low.
       refreshRadar();
-      // $timeout(refreshCurrent, 1000);  // TESTING
-      // $timeout(refreshTenday, 1000);   // TESTING
+      $timeout(refreshCurrent, 1000);
+      $timeout(refreshTenday, 1000);
       
     } else {    // Month
     /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
