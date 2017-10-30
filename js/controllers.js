@@ -64,8 +64,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     function logTimeStamps(){
       let views = ['current', 'hourly', 'tenday', 'radar'],
           w     = wData.info, lu, lc, hr, min, s;
-      for(let i in views) {
-        let view = views[i];
+      for(let view of views) {
         console.log(view, 'lastUpdated: ',  w[view].lastUpdated);
         lc = new Date(w[view].lastChecked);
         console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
