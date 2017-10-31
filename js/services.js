@@ -132,12 +132,14 @@ var app = angular.module('weatherServices', [])
     zoom = zoom || 200;
 
     return {
+      // idUserSel ??? instead of id...
       id:           data.createRadarId(zip, zoom),
       lastChecked:  0,
       lastUpdated:  0,    // Store timestamps as seconds since epoch, i.e. 1970.
       spinner:      false,
+      spinnerId:    0,
       weather:      {},   // id, img, imgUrl, zoom
-      zoom:         zoom  //
+      zoomUserSel:  zoom  //
     };
     
   }
@@ -162,7 +164,7 @@ var app = angular.module('weatherServices', [])
     data.info.view = $location.path().substring(1);
     return data.info.view;
   }
-  data.setZoom = function(z) {
+  data.setZoom            = function(z) {
     // Left out limit checks since zoom button disables on limits.
     var radar  = data.info.radar;
     
@@ -189,10 +191,45 @@ var app = angular.module('weatherServices', [])
      */
     let views = _view ? [_view] : ['current', 'hourly', 'tenday', 'radar'];
 
+    _view === 'current' ? views.push('hourly') : 0;
+
     for(let view of views) {
       let obj     = data.info[view];
       obj.message = wDates.freshWarning(obj.lastUpdated, view);
     }
+  }
+  data.setSpinner         = function(view, status, id) {
+    /**
+     * The concept of the spinner is to only run if has been a while since last requesting data from
+     * the server. So, I create a 'last request' id when turning on spinner, then turn it off after the
+     * timeout if the timeout sends the correct id. This allows city change to still get a spinner if it
+     * has been a long time sine request.
+     */
+    let newSpinnerId;
+
+    function chgSpinner() {
+      data.info[view].spinner = status;
+      if (view === 'current') {
+        data.info.hourly.spinner = status;
+      }
+    }
+
+    console.log('setting spinner for', view, ', status: ', status, ', id: ', id, 'dataId: ', data.info[view].spinnerId);
+
+    if (status) {
+      chgSpinner();
+      newSpinnerId              = Math.ceil(Math.random()*1000,0);
+      console.log('setting spinner for ', view, ', got a newID: ', newSpinnerId);
+      data.info[view].spinnerId = newSpinnerId;
+      $timeout(data.setSpinner, 2000, true, view, false, newSpinnerId);
+    } else if (id === data.info[view].spinnerId) {
+      chgSpinner();
+      data.info[view].id  = 0;  // setting to a value the id could never be because of Math.ceil.
+    }
+    // in case we turn spinner off without getting new data from server.
+    data.updateFreshnessMsg(view);
+
+    return newSpinnerId;
   }
 
   return data;
@@ -516,13 +553,11 @@ var app = angular.module('weatherServices', [])
   }
   function refreshCurrent() {
     let expiredData = wDates.isExpired(wData.info.current.lastUpdated, 'current'),
-        recentCheck = wDates.recentCheck(wData.info.current.lastChecked, 'current');
+        recentCheck = wDates.recentCheck(wData.info.current.lastChecked, 'current'),
+        spinnerId;
         
-    function setSpinners(status) {
-      wData.info.current.spinner = status;
-      wData.info.hourly.spinner  = status;
-    }
     function clearMessages() {
+      // Need to keep this in case spinner does not go.
       wData.info.current.message  = '';
       wData.info.hourly.message   = '';
     }
@@ -532,7 +567,9 @@ var app = angular.module('weatherServices', [])
     if(expiredData){
 
       // Stops spinner from going all the time on a bad network connection / slow device.      
-      !recentCheck ? setSpinners(true) : 0;
+      if (!recentCheck) {
+        spinnerId = wData.setSpinner('current', true);
+      }
 
       httpReq('current').then(r => { 
         try {
@@ -543,6 +580,7 @@ var app = angular.module('weatherServices', [])
             validTemp.test(r.data.current.temp)   ? updateView('current', r.data) : 0;
             validTemp.test(r.data.hourly[0].temp) ? updateView('hourly', r.data)  : 0;
 
+            console.log('do I need to clear current message, should be taken care of with spinner');
             clearMessages();
             wDB._put(wData.info.id, wData.info);
           } // Could have done else > cache for later, but seemed super rare case and more code.
@@ -550,12 +588,15 @@ var app = angular.module('weatherServices', [])
           wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
         }
 
-        setSpinners(false);
+        wData.setSpinner('current', false, spinnerId);
+        // setSpinners(false);
 
-    }, e => {
-      wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
-      setSpinners(false);
-    })
+      }, e => {
+        wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
+        console.log('do I need to set current spinner to false?');
+        wData.setSpinner('current', false, spinnerId);
+        // wData.setSpinner('current', false);
+      })
     }
   }
   function refreshTenday() {
@@ -564,18 +605,21 @@ var app = angular.module('weatherServices', [])
      */
 
     let expiredData = wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday'),
-        recentCheck = wDates.recentCheck(wData.info.tenday.lastChecked, 'tenday');
+        recentCheck = wDates.recentCheck(wData.info.tenday.lastChecked, 'tenday'),
+        spinnerId;
 
     wData.info.tenday.lastChecked = Date.now();
 
     if(expiredData){
 
-      // Stops spinner from going all the time on a bad network connection / slow device.
-      wData.info.tenday.spinner = !recentCheck;
+      // Set the auto-stopping spinner if it has been a shile since last request.
+      if (!recentCheck) {
+        spinnerId = wData.setSpinner('tenday', true);
+      }
 
       httpReq('tenday').then(r => {
-        let validTemp   = /^-?\d+/;
         try{
+          let validTemp   = /^-?\d+/;
           if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
             updateView('tenday', r.data);
             wData.info.tenday.message   = '';
@@ -584,10 +628,12 @@ var app = angular.module('weatherServices', [])
         } catch(e) {
           wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
         }
-        wData.info.tenday.spinner = false;
+        wData.setSpinner('tenday', false, spinnerId);
       }, e => {
         wLog.log('warning', 'Did not get tenday data from server, online status: ', navigator.onLine);
-        wData.info.tenday.spinner = false;
+        console.log('do I need to set tenday spinner to false?');
+        wData.setSpinner('tenday', false, spinnerId);
+        // wData.info.tenday.spinner = false;
       })
     }
   }
