@@ -12,8 +12,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
-  wData.t0 = performance.now();
-
   $interval(weather.refreshForecasts, 10000);
 
   /* Get the weather data. */
@@ -60,31 +58,32 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     })
   })
   
-  // $scope.logData = () => {    // TESTING
-  //   function logTimeStamps(){
-  //     let views = ['current', 'hourly', 'tenday', 'radar'],
-  //         w     = wData.info, lu, lc, hr, min, s;
-  //     for(let view of views) {
-  //       console.log(view, 'lastUpdated: ',  w[view].lastUpdated);
-  //       lc = new Date(w[view].lastChecked);
-  //       console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
-  //     }
-  //   }
-  //   logTimeStamps();
-  //   console.log('data: ', wData);
-  //   console.log('autocomp: ', autocomp);
-  //   wDB._getAll().then(r => console.log('wDB: ', r))
-  //   wLog.getLogs().then(r => console.log('logs: ', r))
-  // }
-  // $scope.downloadWeather = () => {   // TESTING
-  //   console.log('downloading weather');
-  //   let storageObj = wData.info;
-  //   let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(storageObj));
-  //   let dlAnchorElem = document.createElement('a');
-  //   dlAnchorElem.setAttribute("href",     dataStr     );
-  //   dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
-  //   dlAnchorElem.click();      
-  // }
+  $scope.logData = () => {    // TESTING
+    function logTimeStamps(){
+      let views = ['current', 'hourly', 'tenday', 'radar'],
+          w     = wData.info, lu, lc, hr, min, s;
+      for(let view of views) {
+        lc = new Date(w[view].lastChecked);
+        lu = new Date(w[view].lastUpdated);
+        console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
+        console.log(view, 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
+      }
+    }
+    logTimeStamps();
+    console.log('data: ', wData);
+    console.log('autocomp: ', autocomp);
+    wDB._getAll().then(r => console.log('wDB: ', r))
+    wLog.getLogs().then(r => console.log('logs: ', r))
+  }
+  $scope.downloadWeather = () => {   // TESTING
+    console.log('downloading weather');
+    let storageObj = wData.info;
+    let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(storageObj));
+    let dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href",     dataStr     );
+    dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
+    dlAnchorElem.click();      
+  }
   
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
