@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import keys
-import logging
+# import logging
 
 def max_calls(_typ):
     """ For notes, see method: api_calls_avail."""
@@ -76,8 +76,6 @@ def create_url(view, zipcode, options=None):
         day     = str(options[2]).zfill(2)
         api_calls = 'history_' + year + _mon + day
 
-    logging.info('sutils, keys: %s' %keys)
-    logging.info('sutils, key: %s' %keys.key)
     base = 'https://api.wunderground.com/api/' + keys.key + '/'
     url = {
         'current': base + api_calls + '/q/' + zipcode + '.json',

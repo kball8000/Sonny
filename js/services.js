@@ -187,8 +187,12 @@ var app = angular.module('weatherServices', [])
   }
   data.updateLastChecked  = function(view) {
     let d = Date.now();
-    data.info[view].lastChecked = d;
-    (view === '')
+    if (view === 'current' || view === 'hourly') {
+      data.info.current.lastChecked = d;
+      data.info.hourly.lastChecked  = d;
+    } else {
+      data.info[view].lastChecked   = d;
+    }
   };
   data.updateFreshnessMsg = function(_view) {
     /**
@@ -196,7 +200,11 @@ var app = angular.module('weatherServices', [])
      */
     let views = _view ? [_view] : ['current', 'hourly', 'tenday', 'radar'];
 
-    _view === 'current' ? views.push('hourly') : 0;
+    if (_view === 'current') {
+      views.push('hourly');
+    } else if (_view === 'hourly'){
+      views.push('current');
+    }
 
     for(let view of views) {
       let obj     = data.info[view];
@@ -204,35 +212,48 @@ var app = angular.module('weatherServices', [])
     }
   }
   data.clearMessages      = function(view) {
-    if (view === 'current' || view || 'hourly'){
+    if (view === 'current' || view === 'hourly'){
       data.info.current.message = '';
-      data.info.hourly.message = '';
+      data.info.hourly.message  = '';
     } else {
-      data.info[view].message = '';
+      data.info[view].message   = '';
     }
   }
   data.setSpinner         = function(view, status, id) {
     /**
      * The concept of the spinner is to only run if has been a while since last requesting data from
-     * the server. So, I create a 'last request' id when turning on spinner, then turn it off after the
-     * timeout if the timeout sends the correct id. This allows city change to still get a spinner if it
-     * has been a long time sine request.
+     * the server. So, I create a 'last request/checked' id when turning on spinner, then turn it off 
+     * after the timeout if the timeout sends the correct id. This allows city change to still get a 
+     * spinner if it has been a long time sine request.
      */
     let newSpinnerId;
 
     function chgSpinner() {
-      data.info[view].spinner = status;
-      (view === 'current') ? (data.info.hourly.spinner = status) : 0;
+      if (view === 'current' || view === 'hourly'){
+        data.info.current.spinner = status;
+        data.info.hourly.spinner  = status;
+      } else {
+        data.info[view].spinner   = status;
+      }
+    }
+    function setSpinnerId(id) {
+      if (view === 'current' || view === 'hourly'){
+        data.info.current.spinnerId = id;
+        data.info.hourly.spinnerId  = id;
+      } else {
+        data.info[view].spinnerId   = id;
+      }
+      return id;
     }
 
     if (status) {
       chgSpinner();
-      newSpinnerId              = Math.ceil(Math.random()*1000,0);
-      data.info[view].spinnerId = newSpinnerId;
+      newSpinnerId = setSpinnerId(Math.ceil(Math.random()*1000,0));
       $timeout(data.setSpinner, 2000, true, view, false, newSpinnerId);
     } else if (id === data.info[view].spinnerId) {
+      // turn spinner off only if this returned data request / timeout actually turned it on.
       chgSpinner();
-      data.info[view].spinnerId = 0;  // setting to a value the id could never be because of Math.ceil.
+      setSpinnerId(0);  // setting to a value the id could never be because of Math.ceil.
     }
     // in case we turn spinner off without getting new data from server.
     data.updateFreshnessMsg(view);
@@ -564,13 +585,12 @@ var app = angular.module('weatherServices', [])
         recentCheck     = wDates.recentCheck(wData.info[view].lastChecked, view),
         validTempRegex  = /^-?\d+/,
         validTemp       = {
-          current:  r.data.current.temp,
-          hourly:   r.data.hourly[0].temp,
-          tenday:   r.data.tenday[0].high
+          current:  'current.temp',
+          hourly:   'hourly[0].temp',
+          tenday:   'tenday[0].high'
         },
         spinnerId;
-        
-    // wData.info[view].lastChecked = Date.now();
+
     wData.updateLastChecked(view);
 
     if(expiredData){
@@ -583,9 +603,11 @@ var app = angular.module('weatherServices', [])
         try {
           if(wData.info.zip === r.data.zip) {
 
-            validTempRegex.test(validTemp[view]) ? updateViewData(view, r.data) : 0;
-            if (view === 'current') {
-              validTempRegex.test(validTemp['hourly']) ? updateViewData('hourly', r.data) : 0;
+            if (view === 'current' || view == 'hourly') {
+              validTempRegex.test(r.data[validTemp['current']]) ? updateViewData('current', r.data) : 0;
+              validTempRegex.test(r.data[validTemp['hourly']])  ? updateViewData('hourly', r.data)  : 0;
+            } else {
+              validTempRegex.test(r.data[validTemp[view]])      ? updateViewData(view, r.data)      : 0;
             }
 
             wData.clearMessages(view);
@@ -600,97 +622,6 @@ var app = angular.module('weatherServices', [])
       }, e => {
         wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ', navigator.onLine);
         wData.setSpinner(view, false, spinnerId);
-      })
-    }
-  }
-  function refreshCurrentOLD() {
-
-    //
-    // DEPRECATED AT 1.27
-    //
-
-    let expiredData = wDates.isExpired(wData.info.current.lastUpdated, 'current'),
-        recentCheck = wDates.recentCheck(wData.info.current.lastChecked, 'current'),
-        spinnerId;
-        
-    function clearMessages() {
-      // Need to keep this in case spinner does not go.
-      wData.info.current.message  = '';
-      wData.info.hourly.message   = '';
-    }
-
-    wData.info.current.lastChecked = Date.now();
-
-    if(expiredData){
-      console.log('expired current data, updating...');
-      // Stops spinner from going all the time on a bad network connection / slow device.      
-      if (!recentCheck) {
-        spinnerId = wData.setSpinner('current', true);
-      }
-
-      httpReq('current').then(r => { 
-        try {
-          let validTemp = /^-?\d+/;
-
-          if(wData.info.zip === r.data.zip) {
-
-            validTemp.test(r.data.current.temp)   ? updateViewData('current', r.data) : 0;
-            validTemp.test(r.data.hourly[0].temp) ? updateViewData('hourly', r.data)  : 0;
-
-            clearMessages();
-            wDB._put(wData.info.id, wData.info);
-          } // Could have done else > cache for later, but seemed super rare case and more code.
-        } catch(e) {
-          wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
-        }
-
-        wData.setSpinner('current', false, spinnerId);
-
-      }, e => {
-        wLog.log('warning', 'Did not get cur/hr data from server, online status: ', navigator.onLine);
-        wData.setSpinner('current', false, spinnerId);
-      })
-    } else {
-      console.log('fresh current data, not updating');
-    }
-  }
-  function refreshTendayOLD() {
-    /**
-     * Update with server data and display a message if no server data and data is getting stale.
-     */
-
-    //
-    // DEPRECATED AT 1.27
-    //
-
-    let expiredData = wDates.isExpired(wData.info.tenday.lastUpdated, 'tenday'),
-        recentCheck = wDates.recentCheck(wData.info.tenday.lastChecked, 'tenday'),
-        spinnerId;
-
-    wData.info.tenday.lastChecked = Date.now();
-
-    if(expiredData){
-
-      // Set the auto-stopping spinner if it has been a shile since last request.
-      if (!recentCheck) {
-        spinnerId = wData.setSpinner('tenday', true);
-      }
-
-      httpReq('tenday').then(r => {
-        try{
-          let validTemp   = /^-?\d+/;
-          if(wData.info.zip === r.data.zip && validTemp.test(r.data.tenday[0].high)) {
-            updateViewData('tenday', r.data);
-            wData.info.tenday.message   = '';
-            wDB._put(wData.info.id, wData.info);
-          }
-        } catch(e) {
-          wLog.log('error', 'httpReq cur/hr success, but catch on updatingView');
-        }
-        wData.setSpinner('tenday', false, spinnerId);
-      }, e => {
-        wLog.log('warning', 'Did not get tenday data from server, online status: ', navigator.onLine);
-        wData.setSpinner('tenday', false, spinnerId);
       })
     }
   }

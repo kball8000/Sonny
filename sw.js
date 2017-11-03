@@ -1,4 +1,4 @@
-let CACHE_NAME = 'sonny-v1.26a';
+let CACHE_NAME = 'sonny-v1.26b';
 
 /**
  * Caching essential assets seems critical, otherwise requires user to have browsed
@@ -41,9 +41,7 @@ self.addEventListener('activate', function(event){
     caches.keys().then(function(cacheNames){
       return Promise.all(
         cacheNames.map(function(cacheName){
-          console.log('onActivate, cacheName:', cacheName);
           if (cacheName !== CACHE_NAME){
-            console.log('will delete cacheName: ', cacheName);
             return caches.delete(cacheName);
           }
         })
