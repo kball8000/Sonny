@@ -6,7 +6,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 .config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
 })
-.controller('mainCtrl', function($scope, $interval, $location, $timeout, $http, $q, wData, wDB, wLog, weather, autocomp) {
+.controller('mainCtrl', function($scope, $interval, $location, $timeout, $http, $q, wData, wDB, wLog, wUtils, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
@@ -39,11 +39,17 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     cancelMonthTimeouts();
 
     wData.info.zip = city.zip;
-    weather.refreshForecasts();     // fire off server request.
 
+    console.log('controller, changecity, loading: ', wData.info.radar );
+
+
+    let t0 = performance.now();
     wDB._get(_id).then(r => {       // load local data.      
       wData.info = r ? r.value : new wData.createWeatherObj(city);
       wData.updateFreshnessMsg();
+
+      weather.refreshForecasts();     // fire off server request.
+
       if (initialLoad) {
         wDB.setLoaded();
       };
@@ -60,15 +66,23 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   
   $scope.logData = () => {    // TESTING
     function logTimeStamps(){
-      let views = ['current', 'hourly', 'tenday', 'radar'],
-          w     = wData.info, lu, lc, hr, min, s;
+      let views = ['current', 'hourly', 'tenday', 'radar.weather'],
+          lu, lc;
+          // w     = wData.info, lu, lc, hr, min, s;
+      
+      console.log('\n\n');
       for(let view of views) {
-        lc = new Date(w[view].lastChecked);
-        lu = new Date(w[view].lastUpdated);
-        console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
+        lc = new Date(wUtils.objProp(wData.info, view + '.lastChecked'));
+        lu = new Date(wUtils.objProp(wData.info, view + '.lastUpdated'));
+        // lc = new Date(w[view].lastChecked);
+        // lu = new Date(w[view].lastUpdated);
+        console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds());
         console.log(view, 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
       }
-    }
+      console.log('\n\n');
+      // console.log('radar', 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
+      // console.log('radar', 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
+  }
     logTimeStamps();
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
