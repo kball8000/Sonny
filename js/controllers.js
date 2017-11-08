@@ -28,7 +28,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   }
   function loadCityList(r) {
     if (r && r.value) {
-      autocomp.savedCities  = r.value;
+      console.log('controller, loadcitylist: ', r.value);
+      autocomp.savedCities = r.value;
     } else{
       autocomp.initializeCities();
     }
@@ -40,18 +41,14 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 
     wData.info.zip = city.zip;
 
-    console.log('controller, changecity, loading: ', wData.info.radar );
-
-
-    let t0 = performance.now();
     wDB._get(_id).then(r => {       // load local data.      
       wData.info = r ? r.value : new wData.createWeatherObj(city);
       wData.updateFreshnessMsg();
-
-      weather.refreshForecasts();     // fire off server request.
-
+      // server requst will be fired off by controller.
       if (initialLoad) {
         wDB.setLoaded();
+      } else {
+        weather.refreshForecasts();
       };
     })
   }
@@ -63,26 +60,21 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       changeCity(homeCity, true);
     })
   })
-  
+
   $scope.logData = () => {    // TESTING
     function logTimeStamps(){
       let views = ['current', 'hourly', 'tenday', 'radar.weather'],
           lu, lc;
-          // w     = wData.info, lu, lc, hr, min, s;
       
-      console.log('\n\n');
+      console.log('\n');
       for(let view of views) {
         lc = new Date(wUtils.objProp(wData.info, view + '.lastChecked'));
         lu = new Date(wUtils.objProp(wData.info, view + '.lastUpdated'));
-        // lc = new Date(w[view].lastChecked);
-        // lu = new Date(w[view].lastUpdated);
         console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds());
         console.log(view, 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
       }
-      console.log('\n\n');
-      // console.log('radar', 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds() , '\n\n');
-      // console.log('radar', 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
-  }
+      console.log('\n');
+    }
     logTimeStamps();
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);

@@ -123,7 +123,6 @@ var app = angular.module('weatherServices', [])
       radar:    {}
     }
   };
-
   data.createWeatherObj = function(city) {
     this.view     = ''; // Current page or request, i.e. current, tenday
     this.zip      = city.zip;
@@ -137,7 +136,7 @@ var app = angular.module('weatherServices', [])
   }  
   data.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   // See autocomplete service for explanation of setHome.
-  data.setHome = {flag: false, city: {}};
+  data.setHome            = {flag: false, city: {}};
   data.createForecastObj  = function(dict) {
     return {
       weather:      (dict) ? {} : [],
@@ -184,7 +183,6 @@ var app = angular.module('weatherServices', [])
   }
   data.createRadarWeathObj = function(zip, zoom, id) {
     id = id || data.createRadarId(zip, zoom);
-    console.log('createRadarWeathObj, id: ', id);
     return {
       id:           id,
       img:          null,
@@ -198,8 +196,6 @@ var app = angular.module('weatherServices', [])
   }
   data.createRadarObj     = function(zip, zoom) {
     zoom = zoom || 200;
-
-    console.log('creating radar obj, weather: ', data.createRadarWeathObj(zip,zoom));
 
     return {
       idUserSel:    data.createRadarId(zip, zoom),
@@ -312,7 +308,6 @@ var app = angular.module('weatherServices', [])
 
     return newSpinnerId;
   }
-
   return data;
 })
 .service('wDB', function($q, $interval, wDates){
@@ -449,19 +444,6 @@ var app = angular.module('weatherServices', [])
    * it to refresh weather on wrong city. Now flag allows weather to be retrieved first and list
    * altered second.
    */
-  this.savedCities = []
-  this.initializeCities = function() {
-    this.savedCities = [
-      {zip: '61601', text: 'Peoria, Illinois'},
-      {zip: '45201', text: 'Cincinnati, Ohio'},
-      {zip: '37501', text: 'Memphis, Tennessee'}
-    ];
-    wDB._put('savedCities', this.savedCities);
-  }
-  this.setHomeFlag = function(city){
-    wData.setHome.flag = true;
-    wData.setHome.city = city;
-  }
   function setHomeCity() {
     let idx     = this.savedCities.indexOf(wData.setHome.city);
     let newHome = this.savedCities.splice(idx, 1);
@@ -488,10 +470,24 @@ var app = angular.module('weatherServices', [])
       });
     })
   }
-  this.citySearch = function(query) {
-    return query ? wuAutocompleteRequest(query) : this.savedCities;
+  let _this = this;
+  this.savedCities      = [];
+  this.initializeCities = function() {
+    this.savedCities = [
+      {zip: '61601', text: 'Peoria, Illinois'},
+      {zip: '45201', text: 'Cincinnati, Ohio'},
+      {zip: '37501', text: 'Memphis, Tennessee'}
+    ];
+    wDB._put('savedCities', this.savedCities);
   }
-  this.addCity = function(newCity){
+  this.setHomeFlag      = function(city){
+    wData.setHome.flag = true;
+    wData.setHome.city = city;
+  }
+  this.citySearch       = function(query) {
+    return query ? wuAutocompleteRequest(query) : _this.savedCities;
+  }
+  this.addCity          = function(newCity){
     /**
      * Add user entered/selected zip to the top of the 'most recent' list
      * and remove duplicate entry, if it was already in list.
@@ -507,7 +503,7 @@ var app = angular.module('weatherServices', [])
       this.savedCities.splice(max_length);
     }
 
-    if (idx > 1 || idx === -1) {
+    if (idx !== 0 && idx !== 1) {
       wDB._put('savedCities', this.savedCities);
     }
   }
@@ -541,7 +537,6 @@ var app = angular.module('weatherServices', [])
     var url = window.location.origin + _url;
     return $http.post(url, data, config); 
   }
-  // function createTempRadarObj(r, id) {
   function createTempRadarObj(r) {
       /** 
      * Example id: radar-61603-768-1024-200, zip/screen height/screen width/zoom
@@ -554,9 +549,6 @@ var app = angular.module('weatherServices', [])
         obj     = wData.createRadarWeathObj(zip, zoom, id),
         date    = wDates.convStr(r.headers('X-Wdate'));
 
-    // obj.weather.img         = r.data;
-    // obj.weather.lastChecked = Date.now();
-    // obj.weather.lastUpdated = date;
     obj.img         = r.data;
     obj.lastChecked = Date.now();
     obj.lastUpdated = date;
@@ -570,31 +562,19 @@ var app = angular.module('weatherServices', [])
     let recentCheck = wDates.recentCheck(wData.info.radar.weather.lastChecked, 'radar');
     wData.updateLastChecked('radar.weather');
     
-    //
-    //  NEED TO COMPARE ZOOMS SOMEWHERE IN HERE.
-    //
-
       wData.info.radar.spinner = !recentCheck;
 
       httpReq('radar').then(r => {
         try {
           if(!r.headers('X-Werror')){
 
-            console.log('hi1');
             let newRadar = createTempRadarObj(r);
-            console.log('hi2');
             
-            // let _id = r.headers('X-Wid');
             if(newRadar.id === wData.info.radar.idUserSel){
-              // updateViewData('radar', r);
-              console.log('hi3');              
               updateViewData('radar', newRadar);
               wDB._put(wData.info.id, wData.info);
               wDB._put(newRadar.id, newRadar);
-              // wDB._put(wData.info.radar.weather.id, wData.info.radar.weather);
             } else {
-              console.log('hi4');
-              // let radarObj  = createTempRadarObj(r, _id);
               wDB._put(newRadar.id, newRadar);
             }
 
@@ -616,7 +596,6 @@ var app = angular.module('weatherServices', [])
     var obj = wData.info[view];
 
     if(view === 'radar') {
-      console.log('hi updateviewdata RADAR');
       obj.weather = newData;
     } else if(view === 'month') {
       /* Only setting these 2 params, the rest should match because of id check in refresh radar.*/
@@ -628,8 +607,9 @@ var app = angular.module('weatherServices', [])
         obj.lastUpdated = Date.now();
       } else {
         obj.message = newData.error;
-      }      
+      }
     }
+    wData.updateFreshnessMsg(view);
   }
   function refreshView(view) {
     let expiredData     = wDates.isExpired(wData.info[view].lastUpdated, view),
@@ -764,7 +744,8 @@ var app = angular.module('weatherServices', [])
 
     let view  = wData.setRequestView();
     
-    console.log('refreshing forecasts, VIEW: ', view);
+    let t = new Date();
+    console.log('refreshing forecasts, VIEW: ', view, ', time: ', t.getHours() + ':' + t.getUTCMinutes() + ':' + t.getSeconds());
 
     if(view === 'tenday'){
       refreshView('tenday');    // generally faster than current, so no timeout reqd.
@@ -792,56 +773,6 @@ var app = angular.module('weatherServices', [])
       }
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');
-    }
-
-    if (wData.setHome.flag) {
-      autocomp.setHomeCity();
-    }
-
-    wDB.cleanupCache();
-  }
-  this.refreshForecastsOld = function() {
-    /**
-     * The goal here is to refresh as much as possible with the current page taking priority. 
-     * Expensive calls like radar (filesize / not used as often as other features) and month 
-     * (uses lots of limited wu api calls on server) are more on demand. 
-     */ 
-
-    //
-    // DEPRECATED THIS VERSION OF THE FUNCTION AT 1.27
-    //
-
-    let view  = wData.setRequestView();
-    
-
-    // change name of refresh curtenday to refreshView.
-
-    if(view === 'tenday'){
-      refreshTenday();    // generally faster than current, so no timeout reqd.
-      refreshCurrent();
-      
-    } else if(view === 'current' || view === 'hourly'){
-      refreshCurrent();
-      $timeout(refreshTenday, 300);
-      
-    } else if(view === 'radar'){
-      // Radar has extra DB check, added timeout so radar will still be first 
-      // request to wu and first dibs if api calls available is low.
-      refreshRadar();
-      $timeout(refreshCurrent, 1000);
-      $timeout(refreshTenday, 1000);
-      
-    } else {    // Month
-    /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
-      let month = wData.info.month;
-      $timeout.cancel(month.timeout);
-
-      if(!month.complete){
-        month.retries = 5;
-        refreshMonth(month);
-      }      
-      $timeout(refreshCurrent, 1000);
-      $timeout(refreshTenday, 1000);
     }
 
     if (wData.setHome.flag) {
