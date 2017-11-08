@@ -553,8 +553,6 @@ var app = angular.module('weatherServices', [])
     obj.lastChecked = Date.now();
     obj.lastUpdated = date;
     
-    console.log('returning obj create temp radar', obj);
-
     return obj;
   }
   function requestRadar(radar) {
@@ -620,7 +618,6 @@ var app = angular.module('weatherServices', [])
     wData.updateLastChecked(view);
 
     if(expiredData){
-      console.log('expired data for ', view, 'recentCheck: ', recentCheck);
       // Stops spinner from going all the time on a bad network connection / slow device.      
       if (!recentCheck) {
         spinnerId = wData.setSpinner(view, true);
@@ -723,7 +720,6 @@ var app = angular.module('weatherServices', [])
           wData.info.radar.weather  = r.value;
           wData.updateFreshnessMsg('radar');
         } catch (e) {
-          console.log('No radar image in db, requesting from server.');
           requestRadar();
         }
 
@@ -731,7 +727,6 @@ var app = angular.module('weatherServices', [])
         (expiredData) ? requestRadar() : 0;
       })
     } else if (sameZoom && expiredData) {
-      console.log('samezoom and expired, checking with server');
       requestRadar();
     }      
   }
@@ -745,7 +740,7 @@ var app = angular.module('weatherServices', [])
     let view  = wData.setRequestView();
     
     let t = new Date();
-    console.log('refreshing forecasts, VIEW: ', view, ', time: ', t.getHours() + ':' + t.getUTCMinutes() + ':' + t.getSeconds());
+    // console.log('refreshing forecasts, VIEW: ', view, ', time: ', t.getHours() + ':' + t.getUTCMinutes() + ':' + t.getSeconds());
 
     if(view === 'tenday'){
       refreshView('tenday');    // generally faster than current, so no timeout reqd.

@@ -28,7 +28,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   }
   function loadCityList(r) {
     if (r && r.value) {
-      console.log('controller, loadcitylist: ', r.value);
       autocomp.savedCities = r.value;
     } else{
       autocomp.initializeCities();
