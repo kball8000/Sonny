@@ -232,9 +232,9 @@ class GetWeather(webapp2.RequestHandler):
         info = json.loads(self.request.body)   # weather obj from page
 
         # TESTING
-        # to_sleep = 5
-        # logging.info('to_sleep: %s' %to_sleep)
-        # time.sleep(to_sleep)
+        to_sleep = 5
+        logging.info('to_sleep: %s' %to_sleep)
+        time.sleep(to_sleep)
         # END TESTING
 
         forecast_p      = models.Forecast.get_async(info)

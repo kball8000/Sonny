@@ -243,28 +243,21 @@ var app = angular.module('weatherServices', [])
   data.updateFreshnessMsg = function(_view) {
     /**
      * Will update an individual view if requested, otherwise all views.
+     * Run when going to a page and whenever updating data to the screen either from local db or server.
      */
     let views = _view ? [_view] : ['current', 'hourly', 'tenday', 'radar.weather'];
 
-    if (_view === 'current') {
-      views.push('hourly');
-    } else if (_view === 'hourly'){
-      views.push('current');
-    }
+    // if (_view === 'current') {
+    //   views.push('hourly');
+    // } else if (_view === 'hourly'){
+    //   views.push('current');
+    // }
 
     for (let view of views) {
       let lastUpdated = wUtils.objProp(data.info, view + '.lastUpdated'),
           message     = wDates.freshWarning(lastUpdated, view);
 
       wUtils.objProp(data.info, view + '.message', message);
-    }
-  }
-  data.clearMessage      = function(view) {
-    if (view === 'current' || view === 'hourly'){
-      data.info.current.message = '';
-      data.info.hourly.message  = '';
-    } else {
-      wUtils.objProp(data.info, view + '.message', '');
     }
   }
   data.setSpinner         = function(view, status, id) {
@@ -296,7 +289,7 @@ var app = angular.module('weatherServices', [])
 
     if (status) {
       chgSpinner();
-      newSpinnerId = setSpinnerId(Math.ceil(Math.random()*1000,0));
+      newSpinnerId = setSpinnerId(Math.ceil(Math.random()*1000));
       $timeout(data.setSpinner, 2000, true, view, false, newSpinnerId);
     } else if (id === data.info[view].spinnerId) {
       // turn spinner off only if this returned data request / timeout actually turned it on.
@@ -304,7 +297,7 @@ var app = angular.module('weatherServices', [])
       setSpinnerId(0);  // setting to a value the id could never be because of Math.ceil.
     }
     // in case we turn spinner off without getting new data from server.
-    data.updateFreshnessMsg(view);
+    // data.updateFreshnessMsg(view);
 
     return newSpinnerId;
   }
@@ -616,6 +609,7 @@ var app = angular.module('weatherServices', [])
         spinnerId;
 
     wData.updateLastChecked(view);
+    wData.updateFreshnessMsg(view);
 
     if(expiredData){
       // Stops spinner from going all the time on a bad network connection / slow device.      
@@ -633,7 +627,7 @@ var app = angular.module('weatherServices', [])
               validTempRegex.test(r.data.tenday[0].high)  ? updateViewData('tenday', r.data) : 0;
             }
 
-            wData.clearMessage(view);
+            // wData.updateFreshnessMsg(view);
             wDB._put(wData.info.id, wData.info);
           } // Could have done else > cache for later, but seemed super rare case and more code.
         } catch(e) {
@@ -739,9 +733,6 @@ var app = angular.module('weatherServices', [])
 
     let view  = wData.setRequestView();
     
-    let t = new Date();
-    // console.log('refreshing forecasts, VIEW: ', view, ', time: ', t.getHours() + ':' + t.getUTCMinutes() + ':' + t.getSeconds());
-
     if(view === 'tenday'){
       refreshView('tenday');    // generally faster than current, so no timeout reqd.
       refreshView('current');

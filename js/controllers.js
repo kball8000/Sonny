@@ -43,7 +43,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     wDB._get(_id).then(r => {       // load local data.      
       wData.info = r ? r.value : new wData.createWeatherObj(city);
       wData.updateFreshnessMsg();
-      // server requst will be fired off by controller.
+      // server requst will be fired off by individual page controller.
       if (initialLoad) {
         wDB.setLoaded();
       } else {
