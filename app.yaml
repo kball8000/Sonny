@@ -17,6 +17,10 @@ handlers:
   static_files: sw.js
   upload: sw\.js
 
+- url: /manifest\.json
+  static_files: manifest.json
+  upload: manifest\.json
+
 - url: /css
   static_dir: css
 
