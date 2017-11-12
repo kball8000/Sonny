@@ -112,7 +112,10 @@ var app = angular.module('weatherServices', [])
   }
 })
 .service('wData', function($location, $timeout, wDates, wUtils) {
- /* This object is the main object displayed. It is common / reused among the different pages, i.e. current / hourly... data object contains all weather info per zip code. */
+  /**
+   * This object is the main object displayed. It is common / reused among the different pages, 
+   * i.e. current / hourly... data object contains all weather info per zip code.
+   */ 
   
   var data = {
     info: {
@@ -156,9 +159,9 @@ var app = angular.module('weatherServices', [])
   }
   data.createMonthObj     = function(zip, yr, mon) {
     if (!yr){
-      var date = new Date();
-      yr  = date.getFullYear();
-      mon = date.getMonth();      
+      let d = new Date();
+      yr  = d.getFullYear();
+      mon = d.getMonth();      
     }
 
     return {
@@ -167,7 +170,7 @@ var app = angular.module('weatherServices', [])
       monthText:  data.months[mon], 
       complete:   false,
       id:         data.createMonthId(zip, yr, mon),
-      retries:    0,
+      // retries:    0,
       timeout:    null,
       weather:    {} // includes calendar and monthly totals.
     }
@@ -301,6 +304,17 @@ var app = angular.module('weatherServices', [])
 
     return newSpinnerId;
   }
+
+  data.setDurations       = function(duration, count) {   // TESTING
+    let random = Math.random()
+    let str = 'Took ' + duration + ' to get '+ count +' days from WU.';
+
+    data.requestDurations.unshift(str);
+    data.requestDurations.splice(10);
+  }
+
+  data.requestDurations = [];    // TESTING
+
   return data;
 })
 .service('wDB', function($q, $interval, wDates){
@@ -589,7 +603,6 @@ var app = angular.module('weatherServices', [])
     if(view === 'radar') {
       obj.weather = newData;
     } else if(view === 'month') {
-      /* Only setting these 2 params, the rest should match because of id check in refresh radar.*/
       obj.complete = newData.complete;
       obj.weather  = newData.weather;
     } else {    // current / hourly / tenday
@@ -603,6 +616,10 @@ var app = angular.module('weatherServices', [])
     wData.updateFreshnessMsg(view);
   }
   function refreshView(view) {
+    /**
+     * This refreshes Now / Hourly / Tenday tabs.
+     */
+
     let expiredData     = wDates.isExpired(wData.info[view].lastUpdated, view),
         recentCheck     = wDates.recentCheck(wData.info[view].lastChecked, view),
         validTempRegex  = /^-?\d+/,
@@ -658,7 +675,7 @@ var app = angular.module('weatherServices', [])
       /* Create a month object for storing in the DB. Do this to avoid async problem with what is in the main weather.month object vs the month of the returned data */
       var zip       = data.zip,
           yr        = data.year,
-          mon       = data.month - 1,
+          mon       = data.month - 1, // Convert to JS month, i.e. Jan=0.
           newMonth  = wData.createMonthObj(zip, yr, mon);
       
       newMonth.id       = data.id;
@@ -671,24 +688,34 @@ var app = angular.module('weatherServices', [])
       try{
         convert_month(r.data);  // convert back to javascript monthtype, Jan = 0.
         if (month.id === r.data.id){
-          // Update view
+          console.log('month ids are equal, month', month);
+          console.log('request duration: ', r.data.request_duration, ', count: ', r.data.count);
+          wData.setDurations(r.data.request_duration, r.data.count);
+          // Update Screen
+          // Does update view convert month back to JS???
           updateViewData('month', r.data);
           wDB._put(wData.info.id, wData.info);
         }
           // Save to DB
-        var newMonth = createNewMonth(r.data);
-        wDB._put(newMonth.id, newMonth);          
-      } finally {
-        if(month.retries && !month.complete){
-          month.timeout = $timeout(refreshMonth, 60*1000);
-          month.retries--;
-        }
+        let newMonth = createNewMonth(r.data);
+        wDB._put(newMonth.id, newMonth);
+      } catch (e) {
+        wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
+        console.log('Failed to update Month with successful server request data.');
+      // } finally {
+      //   if(month.retries && !month.complete){
+      //     // TODO: look into getting an estimated time back from server instead of defauling to 60.
+      //     month.timeout = $timeout(refreshMonth, 60*1000);
+      //     month.retries--;
+      //   }
       }
     }, e => { 
-      if(month.retries && !month.complete){
-        month.timeout = $timeout(refreshMonth, 60*1000);
-        month.retries--;
-      }
+      wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
+      console.log('Failed to update Month with successful server request data.');
+    // if(month.retries && !month.complete){
+    //     month.timeout = $timeout(refreshMonth, 60*1000);
+    //     month.retries--;
+    //   }
     })
   }
   function refreshRadar() {
@@ -754,8 +781,8 @@ var app = angular.module('weatherServices', [])
       $timeout.cancel(month.timeout);
 
       if(!month.complete){
-        month.retries = 5;
-        refreshMonth(month);
+        // month.retries = 5;
+        refreshMonth();
       }
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');

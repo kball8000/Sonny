@@ -23,8 +23,8 @@ import s_month
 # debugging
 
 # import random
-# import time
-# import logging
+import time
+import logging
 
 
 # Classes for server objects and their methods    
@@ -294,9 +294,16 @@ class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
+        t0 = time.time()
         info    = json.loads(self.request.body) # weather obj from page
-        month   = s_month.get_month(info)
+
+        logging.info('\n\n***Starting month req, yr: %s, mon: %s' %(info['year'], info['month']))   # TESTING
         
+        # month   = s_month.get_month(info)                 # comment is TESTING
+        month, count   = s_month.get_month(info)            # TESTING
+        month.info['request_duration']  = round((time.time() - t0), 2)  # TESTING
+        month.info['count']             = count             # TESTING
+
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(month.info))
 

@@ -39,7 +39,6 @@ def process_day(day, data):
     day['complete'] = now - req > timedelta(days=2)
     
     return day
-
 def create_month(info): 
     m           = calendar.Calendar(6)
     cal, week   = [], []
@@ -71,9 +70,11 @@ def create_month(info):
     info['weather']['cal']                  = cal
     
     return models.Forecast.new_obj(info)
-
 def get_urls_to_update(month): 
-    """ There are 2 reasons to return dates, api usage restriction from weather underground, i.e. 4 of 10 call/min have been used by current / tenday / other month request or less days in month need to be populated then are available, i.e. 27 of 30 days were previously populated with data from wu. """
+    """ There are 2 reasons to return dates, api usage restriction from weather underground, 
+    i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
+    days in month need to be populated then are available, i.e. 27 of 30 days were previously 
+    populated with data from wu."""
     calls_reserved      = 2
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
@@ -113,49 +114,63 @@ def get_urls_to_update(month):
         models.APILock.return_dates(return_dates)
         
     return urls
-
 def update_month(month, urls):
     rpcs, results   = [], []
     cal             = month.info['weather']['cal']
 
+    count           = 0     # TESTING
+
     def handle_rpc(rpc):
         r = rpc.get_result()
         try:
+            logging.info('Handling RPC in cb: r {}'.format(r))
             results.append(json.loads(r.content))
         except:
             logging.info('failed to load history on date, %s' %r)
 
     for url in urls:
+        logging.info('Req2Wu url: %s' %url)
         rpc = urlfetch.create_rpc()
         rpc.callback = functools.partial(handle_rpc, rpc)
         urlfetch.make_fetch_call(rpc, url)
         rpcs.append(rpc)
 
+    logging.info('Requests sent, now we wait...')
+
     for rpc in rpcs:
         rpc.wait()
     
+    logging.info('Requests from WU COMPLETE')
+
     for week in cal:
         for day in week:
             for result in results:
                 try:
                     d = result['history']['date']
+                    # logging.info('cycling thru results to see if it matches the day: %s' %d)
                     date = [int(d['year']), int(d['mon']), int(d['mday'])]
                 except:
+                    logging.info('Failed to update day with data from WU.')
                     date = None
                 if date == day['date']:
+                    logging.info('Going to load history on date for date: %s' %date)
                     try:
                         r = result['history']['dailysummary'][0]
                         day = process_day(day, r)
+                        
+                        count += 1  # TESTING
+
+                        # NOT SURE IF THIS IS LEGAL IN PYTHON... I'M GUESSING I VERIFIED AT THE TIME OF WRITING IT.
                         results.remove(result)
                     except:
                         logging.info('could not get weather')
             if not len(results):
                 break
     
-    return month
+    # return month
+    return month, count     # TESTING
 def create_month_id(_zip, yr, mon):
     return 'month-' + _zip + '-' + str(yr) + str(mon).zfill(2)
-
 def update_end_month(month, end):
     """ End month being one of the non-current months at the beginning and end of a calendar page. new_info should mostly imitate data sent in http request form webpage. """
 
@@ -206,7 +221,6 @@ def update_end_month(month, end):
             non_current_row[i]  = d.copy()
     
     return obj
-
 def save_month(_month):
     month_complete, month_updated = True, False
     cal = _month.info['weather']['cal']
@@ -244,16 +258,22 @@ def get_month(info):
     info['id'] = create_month_id(info['zip'], info['year'], info['month'])
     save, months = False, []
 
+    m_0 = {}                                        # TESTING
+    count = 0                                       # TESTING
+
     month = models.Forecast.get(info)
     if not month:
         month = create_month(info)
 
     if not month.info['complete']:
         urls = get_urls_to_update(month)
-        months.append(update_month(month, urls))
+        m_0, count = update_month(month, urls)     # TESTING 
+        months.append(m_0)                          # TESTING 
+        # months.append(update_month(month, urls))  # Comment is TESTING 
         months.append(update_end_month(month, end=False))
         months.append(update_end_month(month, end=True))
         for m in months:
             save_month(m)
     
-    return month
+    # return month                                  # Comment is TESTING 
+    return month, count
