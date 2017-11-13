@@ -9,8 +9,8 @@
             "type": "image/png"
         },
         {
-            "src": "/images/android-chrome-512x512.png?v=1",
-            "sizes": "512x512",
+            "src": "/images/android-chrome-256x256.png?v=1a",
+            "sizes": "256x256",
             "type": "image/png"
         }
     ],
