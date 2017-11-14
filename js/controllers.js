@@ -89,6 +89,16 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
+  function testGeoLocation() {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      autocomp.getCityFromGeo(position.coords.latitude, position.coords.longitude);
+      // function hi(lat, long) {
+      //   autocomp.getCityFromGeo(lat,long);
+      // }
+      // hi(position.coords.latitude, position.coords.longitude);
+    })
+  }
+  testGeoLocation();
   
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {

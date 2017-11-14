@@ -514,6 +514,16 @@ var app = angular.module('weatherServices', [])
       wDB._put('savedCities', this.savedCities);
     }
   }
+  this.getCityFromGeo   = function(lat, long) {
+    let url = 'https://api.wunderground.com/api/85e2c1e705673981/geolookup/q/';
+    url = url + lat + ',' + long + '.json';
+    
+    console.log('will ping wu with latitude longitude information.');
+    $http.get(url).then(r => {
+      console.log('zip ', r.data.location.zip );
+    })
+
+  }
 })
 .service('weather', function($http, $timeout, wData, wDates, wDB, wLog, wUtils, autocomp){
   function httpReq(view){

@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="css/lib/bootstrap.min.css">
     <link rel="stylesheet" href="css/sonny.css">
 
+    <!-- Bootstrap blue: #428bca -->
+
     <!--  Web Application Manifest  -->
     <link rel="manifest" href="/manifest.json?v=1a">
 
@@ -76,8 +78,11 @@
                            tabindex='1'
                            placeholder="Enter zip code or city">
             <md-item-template>
+                <md-icon md-font-icon="location_on" ng-show='!$index' style='color:#428bca;'
+                aria-label="current location">location_on</md-icon>
               <span md-highlight-text="searchText"
                     md-highlight-flags="^i">
+                    
                 {{city.text}}
               </span>
               <span class="acHome" 
