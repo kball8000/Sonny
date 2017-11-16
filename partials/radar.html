@@ -4,6 +4,10 @@
                           md-mode="indeterminate">
     </md-progress-circular>
   </div>
+  <div  class="radarMsg"
+        ng-show="o.radarRequestTS[o.info.radar.idUserSel]">
+        Loading...
+  </div>
   <p ng-show='o.info.radar.weather.message'> {{o.info.radar.weather.message}} </p>
   <img ng-src='{{o.info.radar.weather.imgUrl}}' 
        ng-show='!o.info.radar.spinner && o.info.radar.weather.img'/>

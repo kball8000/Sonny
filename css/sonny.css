@@ -119,7 +119,10 @@
 .radar-minus {
   bottom: 0em;
 }
-
+.radarMsg {
+  color: red;
+  font-size: 2em;
+}
 
 /* Refinements */
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {

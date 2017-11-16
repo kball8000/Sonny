@@ -1,4 +1,4 @@
-let CACHE_NAME = 'sonny-v1.28d';
+let CACHE_NAME = 'sonny-v1.28e';
 
 /**
  * Caching essential assets seems critical, otherwise requires user to have browsed

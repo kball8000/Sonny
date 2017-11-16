@@ -47,6 +47,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       if (initialLoad) {
         wDB.setLoaded();
       } else {
+        console.log('Just set freshness message, now will get weather from WU', );
         weather.refreshForecasts();
       };
     })
@@ -89,13 +90,9 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
-  function testGeoLocation() {
+  function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
     navigator.geolocation.getCurrentPosition(function(position) {
       autocomp.getCityFromGeo(position.coords.latitude, position.coords.longitude);
-      // function hi(lat, long) {
-      //   autocomp.getCityFromGeo(lat,long);
-      // }
-      // hi(position.coords.latitude, position.coords.longitude);
     })
   }
   testGeoLocation();
@@ -130,6 +127,9 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
        is not in the list, be sure not to send server request for 4 char zip code. Maybe 
        server can check for 5 char zip. 
     */
+
+    console.log('Running cityChg');
+    
     if(city && city.zip !== wData.info.zip){
       changeCity(city);
       
@@ -246,6 +246,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 })
 .controller('radarCtrl', function($scope, wDB, wData, weather) {
   wDB.waitFor('loaded').then(r => {
+    console.log('radar tab clicked');
     $scope.o  = wData;
     weather.refreshForecasts();
   })

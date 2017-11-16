@@ -111,7 +111,7 @@ var app = angular.module('weatherServices', [])
     return obj;
   }
 })
-.service('wData', function($location, $timeout, wDates, wUtils) {
+.service('wData', function($filter, $location, $timeout, wDates, wUtils) {
   /**
    * This object is the main object displayed. It is common / reused among the different pages, 
    * i.e. current / hourly... data object contains all weather info per zip code.
@@ -250,11 +250,11 @@ var app = angular.module('weatherServices', [])
      */
     let views = _view ? [_view] : ['current', 'hourly', 'tenday', 'radar.weather'];
 
-    // if (_view === 'current') {
-    //   views.push('hourly');
-    // } else if (_view === 'hourly'){
-    //   views.push('current');
-    // }
+    if (_view === 'current') {
+      views.push('hourly');
+    } else if (_view === 'hourly'){
+      views.push('current');
+    }
 
     for (let view of views) {
       let lastUpdated = wUtils.objProp(data.info, view + '.lastUpdated'),
@@ -306,14 +306,31 @@ var app = angular.module('weatherServices', [])
   }
 
   data.setDurations       = function(duration, count) {   // TESTING
-    let random = Math.random()
-    let str = 'Took ' + duration + ' to get '+ count +' days from WU.';
+    let timestamp = $filter('date')(new Date(), 'M/d/yy h:mm:ss a'),
+        str       = 'Took ' + duration + ' to get '+ count +' days from WU ' + timestamp;
 
     data.requestDurations.unshift(str);
     data.requestDurations.splice(10);
   }
 
-  data.requestDurations = [];    // TESTING
+  data.requestDurations   = [];   // TESTING
+  data.radarRequestTS     = {}    // TESTING NEW FEATURE
+  data.setRadarTS         = function(clear) {
+
+    let id = data.info.radar.idUserSel;
+
+    if (clear) {
+      data.radarRequestTS[id] = null;
+    } else {
+      let now         = Date.now(),
+          timeLimit   = 60*1000,
+          existingTS  = data.radarRequestTS[id] || 0;
+
+      if ((now - existingTS) > timeLimit) {  
+        data.radarRequestTS[id] = now;
+      }
+    }
+  }
 
   return data;
 })
@@ -417,7 +434,7 @@ var app = angular.module('weatherServices', [])
     return deferred.promise;
   }
   this.cleanupCache = function() {
-    var view, timestamp, request;
+    let view, timestamp, request;
     function removeElem(id){
       view += '_DB';
       if(wDates.isExpired(timestamp, view)){
@@ -520,7 +537,7 @@ var app = angular.module('weatherServices', [])
     
     console.log('will ping wu with latitude longitude information.');
     $http.get(url).then(r => {
-      console.log('zip ', r.data.location.zip );
+      console.log('zip back from WU GET Request ', r.data.location.zip );
     })
 
   }
@@ -578,7 +595,10 @@ var app = angular.module('weatherServices', [])
     wData.updateLastChecked('radar.weather');
     
       wData.info.radar.spinner = !recentCheck;
+      wData.setRadarTS();
 
+      let testId = wData.info.radar.idUserSel;
+      console.log('sending radar request for id: ', testId);
       httpReq('radar').then(r => {
         try {
           if(!r.headers('X-Werror')){
@@ -596,13 +616,16 @@ var app = angular.module('weatherServices', [])
           } else {
             wData.info.radar.weather.message = r.headers('X-Werror');
           }
+          console.log('retrieved radar request for id: ', testId);          
         } catch(e) {
           wData.info.radar.weather.message = 'error processing successful server radar image from wu';
         }
+        wData.setRadarTS(true);
         wData.info.radar.spinner = false;
       }, e => {
         wData.info.radar.progress = false;
         wData.info.radar.weather.message  = 'Error getting Radar image from server!';
+        wData.setRadarTS(true);
         wLog.log('warning', 'Did not get radar image from server, online status: ', navigator.onLine);
       })
   }
@@ -636,7 +659,6 @@ var app = angular.module('weatherServices', [])
         spinnerId;
 
     wData.updateLastChecked(view);
-    wData.updateFreshnessMsg(view);
 
     if(expiredData){
       // Stops spinner from going all the time on a bad network connection / slow device.      
@@ -654,7 +676,6 @@ var app = angular.module('weatherServices', [])
               validTempRegex.test(r.data.tenday[0].high)  ? updateViewData('tenday', r.data) : 0;
             }
 
-            // wData.updateFreshnessMsg(view);
             wDB._put(wData.info.id, wData.info);
           } // Could have done else > cache for later, but seemed super rare case and more code.
         } catch(e) {
@@ -755,7 +776,10 @@ var app = angular.module('weatherServices', [])
         }
 
         expiredData = wDates.isExpired(wData.info.radar.weather.lastUpdated, 'radar');
-        (expiredData) ? requestRadar() : 0;
+
+        if(expiredData) {
+          requestRadar();
+        }
       })
     } else if (sameZoom && expiredData) {
       requestRadar();
@@ -773,7 +797,7 @@ var app = angular.module('weatherServices', [])
     if(view === 'tenday'){
       refreshView('tenday');    // generally faster than current, so no timeout reqd.
       refreshView('current');
-      
+            
     } else if(view === 'current' || view === 'hourly'){
       refreshView('current');
       $timeout(refreshView, 300, true, 'tenday');
