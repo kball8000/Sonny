@@ -37,9 +37,9 @@ var app = angular.module('weatherServices', [])
       current:            15*60*1000,   // cache
       hourly:             15*60*1000,   // cache
       tenday:           6*60*60*1000,   // cache
-      radar:              20*60*1000,   // cache
+      radar:              20*60*1000,   // cache, 20 minutes
       weather_DB:   11*24*60*60*1000,   // removal from indexedDB
-      radar_DB:         8*60*60*1000    // removal from indexedDB
+      radar_DB:         8*60*60*1000    // removal from indexedDB, 8 hours
     };
     return obj[view];
   }
@@ -50,9 +50,15 @@ var app = angular.module('weatherServices', [])
         
     return Date.now() - timestamp < limit;
   }
-  this.isExpired    = function(timestamp, view) {
-    timestamp = timestamp || 0;
+  // this.isExpired    = function(timestamp, view) {
+  this.isExpired    = function(timestamp, view, caller) {
+      timestamp = timestamp || 0;
     let limit = getLimit(view);
+
+    if (view === 'radar') {
+      console.log('checking radar timeLimit: ', limit, ', diff: ', (Date.now() - timestamp), ', bool: ', (Date.now() - timestamp > limit) , 'caller: ', caller);
+    }
+    
     
     return Date.now() - timestamp > limit;
   }
@@ -70,7 +76,8 @@ var app = angular.module('weatherServices', [])
     return date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
   }
   this.freshWarning = function(timestamp, view) {
-    if(this.isExpired(timestamp, view)){
+
+    if(this.isExpired(timestamp, view, 'freshWarning')){
       return 'Last updated: ' + $filter('date')(timestamp, 'medium');
     }
     return '';    
@@ -315,23 +322,33 @@ var app = angular.module('weatherServices', [])
 
   data.requestDurations   = [];   // TESTING
   data.radarRequestTS     = {}    // TESTING NEW FEATURE
-  data.setRadarTS         = function(clear) {
+  // data.setRadarTS         = function(clear) {
+  data.setRadarTS         = function(id) {
+      
+    let now = Date.now();
+    data.radarRequestTS[id] = now;
 
-    let id = data.info.radar.idUserSel;
-
-    if (clear) {
+    return {id: id, ts: now};
+  }
+  data.clearRadarTS         = function(id, ts) {
+    if (data.radarRequestTS[id] === ts) {
       data.radarRequestTS[id] = null;
-    } else {
-      let now         = Date.now(),
-          timeLimit   = 60*1000,
-          existingTS  = data.radarRequestTS[id] || 0;
-
-      if ((now - existingTS) > timeLimit) {  
-        data.radarRequestTS[id] = now;
-      }
     }
   }
+  data.setRadarTS2         = function(id, ts) {
+    if (ts) {
+      let latestTS = data.radarRequestTS[id]
+      if (ts === latestTS) {
+        data.radarRequestTS[id] = null;
+      }
+    } else {
+      data.radarRequestTS[id] = Date.now();
+    }
 
+    return {id: id, ts: data.radarRequestTS[id]};
+  }
+
+    
   return data;
 })
 .service('wDB', function($q, $interval, wDates){
@@ -437,8 +454,9 @@ var app = angular.module('weatherServices', [])
     let view, timestamp, request;
     function removeElem(id){
       view += '_DB';
-      if(wDates.isExpired(timestamp, view)){
-        request = db.transaction(['weather'], 'readwrite')
+      // if(wDates.isExpired(timestamp, view)){               // COMMENT IS FOR TESTING
+      if(wDates.isExpired(timestamp, view, 'cleanUpCache')){  // TESTING
+          request = db.transaction(['weather'], 'readwrite')
         .objectStore('weather')
         .delete(id); 
       }
@@ -584,6 +602,10 @@ var app = angular.module('weatherServices', [])
         date    = wDates.convStr(r.headers('X-Wdate'));
 
     obj.img         = r.data;
+
+    // I DO NOT KNOW IF THIS WORKS, SEEMS LIKE I WHOUDL BE DOING A URL.createObjectURL.
+
+
     obj.lastChecked = Date.now();
     obj.lastUpdated = date;
     
@@ -762,6 +784,7 @@ var app = angular.module('weatherServices', [])
     let expiredData = wDates.isExpired(wData.info.radar.weather.lastUpdated, 'radar'),
         sameZoom    = wData.info.radar.zoomUserSel === wData.info.radar.weather.zoom;
 
+    console.log('refreshRadar, checking expired on current object: ', expiredData);
     if (!sameZoom ) {
       wDB._get(wData.info.radar.idUserSel).then( r => {
         try {
@@ -769,19 +792,22 @@ var app = angular.module('weatherServices', [])
           // WORKING HERE / TESTING. TRY TO FIGURE OUT HOW TO TEST IF URL IS STILL OK BEFORE CREATING A NEW URL.
 
           r.value.imgUrl            = URL.createObjectURL(r.value.img);
+          console.log('image url for wDB image', r.value.imgUrl); 
           wData.info.radar.weather  = r.value;
           wData.updateFreshnessMsg('radar');
+
+          console.log('checking expiration of wDB data: ', r.value.lastUpdated);
+          if(wDates.isExpired(r.value.lastUpdated, 'radar')) {
+            console.log('wDB expired, so firing off a requestRadar');
+            requestRadar();
+          }
         } catch (e) {
-          requestRadar();
-        }
-
-        expiredData = wDates.isExpired(wData.info.radar.weather.lastUpdated, 'radar');
-
-        if(expiredData) {
+          console.log('wDB catch, so firing off a requestRadar');
           requestRadar();
         }
       })
     } else if (sameZoom && expiredData) {
+      console.log('expired so firing off a requestRadar');
       requestRadar();
     }      
   }
