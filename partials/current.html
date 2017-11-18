@@ -8,7 +8,9 @@
   
   <!--    Current Forecast / Conditions    -->
   <div ng-show='!o.info.current.spinner'>
-    <p ng-show='o.info.current.message'> {{o.info.current.message}} </p>
+    <p ng-show='o.info.current.expiredMsg' style="padding-left:1em;">
+      Current weather {{o.info.current.expiredMsg}} 
+    </p>
     
     <div layout='row' style="margin: 14px 0;">
       <div class="imageCol" flex='20'>
@@ -89,7 +91,10 @@
         </p>
       </md-card-content>
     </md-card>
-    
+    <p>
+        Current weather last updated: {{ o.info.current.lastUpdated | date:'medium'}}
+    </p>
+
     <!--    Weather Alerts    -->
     <md-card ng-show='alerts.length'>
       <md-card-content>

@@ -147,7 +147,6 @@ def update_month(month, urls):
             for result in results:
                 try:
                     d = result['history']['date']
-                    # logging.info('cycling thru results to see if it matches the day: %s' %d)
                     date = [int(d['year']), int(d['mon']), int(d['mday'])]
                 except:
                     logging.info('Failed to update day with data from WU.')
@@ -160,7 +159,7 @@ def update_month(month, urls):
                         
                         count += 1  # TESTING
 
-                        # NOT SURE IF THIS IS LEGAL IN PYTHON... I'M GUESSING I VERIFIED AT THE TIME OF WRITING IT.
+                        # NOT SURE IF THIS IS GOOD PYTHON... I'M GUESSING I VERIFIED AT THE TIME OF WRITING IT.
                         results.remove(result)
                     except:
                         logging.info('could not get weather')

@@ -12,7 +12,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
-  $interval(weather.refreshForecasts, 10000);
+  $interval(weather.refreshForecasts, 10*1000);
 
   /* Get the weather data. */
   function cancelMonthTimeouts() {
@@ -40,14 +40,21 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 
     wData.info.zip = city.zip;
 
-    wDB._get(_id).then(r => {       // load local data.      
-      wData.info = r ? r.value : new wData.createWeatherObj(city);
-      wData.updateFreshnessMsg();
-      // server requst will be fired off by individual page controller.
-      if (initialLoad) {
-        wDB.setLoaded();
+    wDB._get(_id).then(r => {       // load local data.
+      if(r && r.value) {
+        if (r.value.radar.img) {
+          r.value.radar.imgUrl = URL.createObjectURL(r.value.radar.img);
+        }
+        wData.info = r.value;
       } else {
-        console.log('Just set freshness message, now will get weather from WU', );
+        new wData.createWeatherObj(city);
+      }
+
+      wData.updateExpiredMsg();
+      
+      if (initialLoad) {
+        wDB.setLoaded();  // server request will be fired off by each page's controller.
+      } else {
         weather.refreshForecasts();
       };
     })
@@ -63,7 +70,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 
   $scope.logData = () => {    // TESTING
     function logTimeStamps(){
-      let views = ['current', 'hourly', 'tenday', 'radar.weather'],
+      let views = ['current', 'hourly', 'tenday', 'radar'],
           lu, lc;
       
       console.log('\n');

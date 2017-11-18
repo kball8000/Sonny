@@ -6,7 +6,9 @@
   </div>
   
   <div ng-show='!o.info.tenday.spinner'>
-    <p ng-show='o.info.tenday.message'>{{o.info.tenday.message}}</p>
+    <p ng-show='o.info.tenday.ExpiredMsg' style="padding-left:1em;">
+      Ten day forecast {{o.info.tenday.ExpiredMsg}}
+    </p>
     <ul class="list-group">
       <li class="list-group-item" 
           ng-repeat='day in o.info.tenday.weather' 

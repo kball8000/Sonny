@@ -1,24 +1,26 @@
 <div id='radar' ng-controller='radarCtrl'>
-  <div layout="row" layout-sm="column" layout-align="space-around">
-    <md-progress-circular ng-show='o.info.radar.spinner' 
-                          md-mode="indeterminate">
-    </md-progress-circular>
-  </div>
   <div  class="radarMsg"
-        ng-show="o.radarRequestTS[o.info.radar.idUserSel]">
+        ng-show="o.radarRequestTS[o.info.radarUser.id]">
         Loading...
   </div>
-  <p ng-show='o.info.radar.weather.message'> {{o.info.radar.weather.message}} </p>
-  <img ng-src='{{o.info.radar.weather.imgUrl}}' 
-       ng-show='!o.info.radar.spinner && o.info.radar.weather.img'/>
+  <p ng-show='o.info.radar.expiredMsg'>Radar image {{o.info.radar.expiredMsg}} </p>
+  <img ng-src='{{o.info.radar.imgUrl}}' 
+       ng-show='o.info.radar.img'/>
+
   <md-button class='md-raised radar-button radar-plus'
-             ng-disabled="o.info.radar.zoomUserSel <= 50"
+             ng-disabled="o.info.radarUser.zoom <= 50"
              ng-click='zoom(true)'>
-    <md-icon md-font-icon='material-icons'>zoom_in</md-icon>
+    <md-icon md-font-icon='material-icons'>
+      zoom_in
+    </md-icon>
   </md-button>
+
   <md-button class='md-raised radar-button radar-minus'
-             ng-disabled='o.info.radar.zoomUserSel >= 1000'
+             ng-disabled='o.info.radarUser.zoom >= 1000'
              ng-click='zoom(false)'>
-    <md-icon md-font-icon='material-icons'>zoom_out</md-icon>
+    <md-icon md-font-icon='material-icons'>
+      zoom_out
+    </md-icon>
   </md-button>
+
 </div>

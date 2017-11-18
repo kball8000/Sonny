@@ -24,7 +24,7 @@ import s_month
 
 # import random
 import time
-import logging
+# import logging
 
 
 # Classes for server objects and their methods    
@@ -259,7 +259,6 @@ class GetWeather(webapp2.RequestHandler):
         
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(_response))
-
 class GetRadar(webapp2.RequestHandler):
     def post(self):
         # since fetching the radar often takes longer then default 5s.
@@ -289,7 +288,6 @@ class GetRadar(webapp2.RequestHandler):
         else:
             models.APILock.return_dates([temp_date])
             send_radar(self, False)
-
 class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
@@ -297,8 +295,6 @@ class GetMonth(webapp2.RequestHandler):
         t0 = time.time()
         info    = json.loads(self.request.body) # weather obj from page
 
-        logging.info('\n\n***Starting month req, yr: %s, mon: %s' %(info['year'], info['month']))   # TESTING
-        
         # month   = s_month.get_month(info)                 # comment is TESTING
         month, count   = s_month.get_month(info)            # TESTING
         month.info['request_duration']  = round((time.time() - t0), 2)  # TESTING
@@ -316,7 +312,6 @@ class AddToQueue(webapp2.RequestHandler):
                 target = 'worker',
                 payload = self.request.body
             )
-            # logging.info('task name: %s, eta: %s' %(task.name, task.eta))
         
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps({'task': 'succeeded adding task'}))
