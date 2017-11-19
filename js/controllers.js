@@ -2,7 +2,7 @@
 // gae = Google App Engine
 // 2016 
 
-var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
+var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSanitize'])
 .config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
 })
@@ -33,6 +33,13 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
       autocomp.initializeCities();
     }
   }
+  function setImgUrl() {
+    try  {
+      r.value.radar.imgUrl = URL.createObjectURL(r.value.radar.img);
+    } catch (e) {
+      console.log('no radar image to create a URL.');
+    }
+  }
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
 
@@ -42,12 +49,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
 
     wDB._get(_id).then(r => {       // load local data.
       if(r && r.value) {
-        if (r.value.radar.img) {
-          r.value.radar.imgUrl = URL.createObjectURL(r.value.radar.img);
-        }
+        setImgUrl();
         wData.info = r.value;
       } else {
-        new wData.createWeatherObj(city);
+        wData.info = new wData.createWeatherObj(city);
       }
 
       wData.updateExpiredMsg();
@@ -177,6 +182,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial'])
     $scope.requestText = 'Add to Server Queue';    
   }
   
+  $scope.testText = '<b>Bolder</b> CO, <i>RULES</i>';
+
   wDB.waitFor('loaded').then(r => {
     $scope.o      = wData;                // For html page
     $scope.months = wData.months;

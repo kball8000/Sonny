@@ -177,7 +177,6 @@ var app = angular.module('weatherServices', [])
       monthText:  data.months[mon], 
       complete:   false,
       id:         data.createMonthId(zip, yr, mon),
-      // retries:    0,
       timeout:    null,
       weather:    {} // includes calendar and monthly totals.
     }
@@ -402,7 +401,8 @@ var app = angular.module('weatherServices', [])
   }
   this._put = function(id, value) {
     this.waitFor('open').then(r => {
-      var request = db.transaction(['weather'], 'readwrite')
+      // var request = db.transaction(['weather'], 'readwrite')
+      db.transaction(['weather'], 'readwrite')
       .objectStore('weather')
       .put({id: id, value: value});
     })
@@ -628,10 +628,11 @@ var app = angular.module('weatherServices', [])
             if(newRadar.id === requestedId){
               updateViewData('radar', newRadar);
               wDB._put(wData.info.id, wData.info);
-              wDB._put(newRadar.id, newRadar);
-            } else {
-              wDB._put(newRadar.id, newRadar);
+              wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
+            } else {                                // CONSIDER REPLACING WITH BELOW
+              wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
             }
+            // wDB._put(newRadar.id, newRadar);        // CONSIDER REPLACING ABOVE WITH THIS LINE.
 
           } else {
             wData.info.radar.errorMsg = r.headers('X-Werror');
@@ -660,6 +661,7 @@ var app = angular.module('weatherServices', [])
       console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
       
     } else if(view === 'month') {
+      console.log('updateviewdata, obj.weather > newdata: ', newData);
       obj.complete = newData.complete;
       obj.weather  = newData.weather;
 
@@ -728,7 +730,8 @@ var app = angular.module('weatherServices', [])
       }
     }
     function createNewMonth(data) {
-      /* Create a month object for storing in the DB. Do this to avoid async problem with what is in the main weather.month object vs the month of the returned data */
+      /* Create a month object for storing in the DB. Do this to avoid async problem with what is
+       in the main weather.month object vs the month of the returned data */
       var zip       = data.zip,
           yr        = data.year,
           mon       = data.month - 1, // Convert to JS month, i.e. Jan=0.
@@ -737,7 +740,7 @@ var app = angular.module('weatherServices', [])
       newMonth.id       = data.id;
       newMonth.weather  = data.weather;
 
-      return newMonth;      
+      return newMonth;
     }
 
     function numCompleteDays() {    // TESTING
@@ -745,41 +748,48 @@ var app = angular.module('weatherServices', [])
           regex = /^-?\d+/,
           count = 0;
 
-      for(let week of m.cal) {
-        for (let day of week) {
-          if (regex.test(day.high)) {
-            count++;
+      if (m.cal) {
+        for(let week of m.cal) {
+          for (let day of week) {
+            if (regex.test(day.high)) {
+              count++;
+            }
           }
-        }
+        }  
       }
-
       return count;
     }
 
-    let t0 = Date.now(),    // TESTING
+    let t0    = Date.now(),    // TESTING
         count = 0;          // TESTING
 
     httpReq('month').then(r => {
+      console.log('httpReq(month).then(r =>', r);
       var month = wData.info.month;
       try{
         convert_month(r.data);  // convert back to javascript monthtype, Jan = 0.
         if (month.id === r.data.id){
           console.log('month ids are equal, month', month);
-          console.log('request duration: ', r.data.request_duration, ', count: ', r.data.count);
+          console.log('server request duration: ', r.data.request_duration, ', count: ', r.data.count);
           count = numCompleteDays();
+          console.log('count from numCompleteDays()', count);
           // Update Screen
           // Does update view convert month back to JS???
 
           updateViewData('month', r.data);
-          wData.setDurations((Date.now() - t0), numCompleteDays() - count);
+          console.log('just ran updateViewData');
+          wData.setDurations((Date.now() - t0), (numCompleteDays() - count));
+          console.log('just ran setDurations');
+          console.log('local request duration: ', wData.requestDurations[0]);
           wDB._put(wData.info.id, wData.info);
         }
-          // Save to DB
-        let newMonth = createNewMonth(r.data);
-        wDB._put(newMonth.id, newMonth);
+        // Save to DB
+        let newMonth = createNewMonth(r.data);    // CONSIDER REPLACING WITH BELOW
+        wDB._put(newMonth.id, newMonth);          // CONSIDER REPLACING WITH BELOW
+        // wDB._put(wData.info.month.id, Object.assign({}, wData.info.month)); // TRY THIS INSTEAD OF ABOVE 2 LINES.
       } catch (e) {
         wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
-        console.log('Failed to update Month with successful server request data.');
+        console.log('Failed to update Month with successful server req, error: ', e);
       }
     }, e => { 
       wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
