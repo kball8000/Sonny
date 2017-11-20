@@ -194,6 +194,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       $scope.years.push(--yr);
     }
 
+    wData.concatDayText(wData.info.month);
     resetRequestBtn();    
     weather.refreshForecasts();
   })

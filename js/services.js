@@ -181,6 +181,44 @@ var app = angular.module('weatherServices', [])
       weather:    {} // includes calendar and monthly totals.
     }
   }
+  data.concatDayText      = function(m) {
+    // month
+    //  displayVersion
+    //  weather
+    //    cal
+    let VERSION = '0.1g';
+    console.log('running concatDayText', m);
+    if (!m.displayTextVersion || m.displayTextVersion !== VERSION ) {
+      if (m.weather && m.weather.cal) {
+        for(let week of m.weather.cal) {
+          for (let day of week) {
+
+
+            // A COUPLE MORE IFS:
+            //  -IF COMPLETE SET, OTHERWISE, ONLY H AND L, NO VALUES.
+            //  -IF MONTH !== DAY[1], SET CLASS TO .noncurrent
+
+
+            day.displayText = "<span class='dayHeader'>" + day.date[2] + '</span>' + 
+            '<br>H ' + day.high + '&deg<br>L ' + day.low + '&deg';
+            if (day.rain == 1) {    // only double == is intentional since it is probably a string.
+              day.displayText = day.displayText + '<br>Rain ' + day.precip + '"';
+            }
+            if (day.snow == 1) {    // only double == is intentional since it is probably a string.
+              day.displayText = day.displayText + '<br>Snow ' + day.snowfall + '"';
+            }
+          }
+          console.log('updated day 1 of week: ', week[0]);
+        }
+      }
+    }
+  
+    console.log('setting displayTextVersion', VERSION);
+    m.displayTextVersion = VERSION;
+
+    return m;
+  }
+
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
         width   = screen.width,
@@ -776,11 +814,14 @@ var app = angular.module('weatherServices', [])
           // Update Screen
           // Does update view convert month back to JS???
 
+          r.data = wData.concatDayText(r.data);
           updateViewData('month', r.data);
           console.log('just ran updateViewData');
-          wData.setDurations((Date.now() - t0), (numCompleteDays() - count));
+          let t1 = Math.round((Date.now() - t0)/10)/100;
+          wData.setDurations(t1, (numCompleteDays() - count));
           console.log('just ran setDurations');
           console.log('local request duration: ', wData.requestDurations[0]);
+
           wDB._put(wData.info.id, wData.info);
         }
         // Save to DB

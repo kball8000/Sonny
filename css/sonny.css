@@ -90,10 +90,10 @@
   .acFade.ng-leave.ng-leave-active {
     opacity:0;
   }
-  
+
   /* Month */
   .table>tbody>tr>td {
-    font-size:  1em;
+    font-size:  0.8em;
     padding:    0.2em;
   }
   #monthInputContent {
@@ -111,13 +111,16 @@
 }
 
 /* Month */
+.dayHeader {
+  color: darkgray;
+}
 #monthTotals>md-list-item {
 min-height: 1.2em;
 height: 1.5em;
 }
 .noncurrent {
   color: gray;
-  background-color: lightgray;
+  /* background-color: lightgray; */
 }
 .chgMonth {
   margin-top: 14px;

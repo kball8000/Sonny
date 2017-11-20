@@ -68,13 +68,14 @@
               <div>
                 <!-- {{day.high|dayweather}} -->
                 <!-- {{day.high|nf}} -->
-                {{day.date[2]}}<br>
+                <span ng-bind-html="day.displayText"></span>
+                <!-- {{day.date[2]}}<br>
                 <span ng-show="day.high">H {{day.high}}&deg;<br></span>
                 <span ng-show="day.low">L {{day.low}}&deg;<br></span>
                 <span ng-show="day.rain > 0">Rain </span>
                 <span ng-show="day.precip > 0">{{day.precip}}"<br></span>
                 <span ng-show="day.snow > 0">Snow </span>
-                <span ng-show="day.snowfall > 0">{{day.snowfall}}"<br></span>
+                <span ng-show="day.snowfall > 0">{{day.snowfall}}"<br></span> -->
               </div>
             </td>
         </tr>
