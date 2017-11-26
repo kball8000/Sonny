@@ -38,6 +38,8 @@ var app = angular.module('weatherServices', [])
       hourly:             15*60*1000,   // cache
       tenday:           6*60*60*1000,   // cache
       radar:              20*60*1000,   // cache, 20 minutes
+      // month:                    1000,   // verifies we have latest html  ---  TESTING
+      month:         1*24*60*60*1000,   // verifies we have latest html
       weather_DB:   11*24*60*60*1000,   // removal from indexedDB
       radar_DB:         8*60*60*1000    // removal from indexedDB, 8 hours
     };
@@ -72,10 +74,10 @@ var app = angular.module('weatherServices', [])
   this.expiredWarning = function(timestamp, view) {
 
     if(this.isExpired(timestamp, view)){
-      let str, 
-          ts = (timestamp === 0) ? 'Never' : $filter('date')(timestamp, 'medium');
+      let format = 'MMM d, y h:mm a'
+          ts = (timestamp === 0) ? 'Never' : $filter('date')(timestamp, format);
 
-      return str + ' may be old, last updated: ' + ts;
+      return ' may be old, last updated: ' + ts;
     }
     return '';    
   }
@@ -177,11 +179,12 @@ var app = angular.module('weatherServices', [])
       monthText:  data.months[mon], 
       complete:   false,
       id:         data.createMonthId(zip, yr, mon),
-      timeout:    null,
+      // timeout:    null,
       weather:    {} // includes calendar and monthly totals.
     }
   }
   data.concatDayText      = function(m) {
+    // DEPRECATED, MOVING TO SERVER IN 1.28g.
     // month
     //  displayVersion
     //  weather
@@ -360,7 +363,7 @@ var app = angular.module('weatherServices', [])
   }
   data.setDurations       = function(duration, count) {   // TESTING
     let timestamp = $filter('date')(new Date(), 'M/d/yy h:mm:ss a'),
-        str       = 'Took ' + duration + ' to get '+ count +' days from WU ' + timestamp;
+        str       = duration + 's for '+ count +' days from WU ' + timestamp;
 
     data.requestDurations.unshift(str);
     data.requestDurations.splice(10);
@@ -387,7 +390,7 @@ var app = angular.module('weatherServices', [])
 })
 .service('wDB', function($q, $interval, wDates){
   const DB_NAME     = 'weatherDB';
-  const DB_VERSION  = 1.0;
+  const DB_VERSION  = 2;  // long long integer, so can be up to a very large integer.
   
   var db = {};
   var checks = {open: false, loaded: false};
@@ -711,7 +714,10 @@ var app = angular.module('weatherServices', [])
         obj.lastUpdated = Date.now();
       }
     }
-    wData.updateExpiredMsg(view);
+
+    if (view !== month) {
+      wData.updateExpiredMsg(view);
+    } 
   }
   function refreshView(view) {
     /**
@@ -812,15 +818,17 @@ var app = angular.module('weatherServices', [])
           count = numCompleteDays();
           console.log('count from numCompleteDays()', count);
           // Update Screen
-          // Does update view convert month back to JS???
+          // Does update view convert month back to JS??? Seems to be working 11/26/17.
 
-          r.data = wData.concatDayText(r.data);
+          // r.data = wData.concatDayText(r.data);
           updateViewData('month', r.data);
           console.log('just ran updateViewData');
           let t1 = Math.round((Date.now() - t0)/10)/100;
           wData.setDurations(t1, (numCompleteDays() - count));
           console.log('just ran setDurations');
           console.log('local request duration: ', wData.requestDurations[0]);
+
+          wData.info.month.lastSuccessfulCheck = Date.now();
 
           wDB._put(wData.info.id, wData.info);
         }
@@ -907,11 +915,12 @@ var app = angular.module('weatherServices', [])
       $timeout(refreshView, 1000, true, 'tenday');
       
     } else {    // Month
-    /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
-      let month = wData.info.month;
-      $timeout.cancel(month.timeout);
+      /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
+      let month   = wData.info.month;
+      let expired = wDates.isExpired(month.lastSuccessfulCheck, 'month');
+      // $timeout.cancel(month.timeout);    // Do not think I'm setting timeouts anymore.
 
-      if(!month.complete){
+      if(!month.complete || expired){
         // month.retries = 5;
         refreshMonth();
       }

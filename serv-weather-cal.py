@@ -292,7 +292,7 @@ class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        t0 = time.time()
+        t0 = time.time()                                    # TESTING
         info    = json.loads(self.request.body) # weather obj from page
 
         # month   = s_month.get_month(info)                 # comment is TESTING

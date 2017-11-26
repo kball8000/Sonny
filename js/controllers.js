@@ -17,6 +17,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   /* Get the weather data. */
   function cancelMonthTimeouts() {
     /**
+     * DEPRECATED IN 1.28g
      * Just in case there are pending month timeouts. Maybe overkill, I guess they could just fizzle
      * out on their own.
      */
@@ -43,7 +44,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
 
-    cancelMonthTimeouts();
+    // cancelMonthTimeouts();   // Do not think I'm setting timeoutouts anymore.
 
     wData.info.zip = city.zip;
 
@@ -170,7 +171,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
         deferred  =  $q.defer();
     
     wData.info.month.id = _id;
-    $timeout.cancel(wData.info.month.timeout);
+    // $timeout.cancel(wData.info.month.timeout); // Do not think I'm setting timeouts anymore.
     wDB._get(_id).then(r => {
       wData.info.month = r ? r.value : wData.createMonthObj(zip, yr, mon);
       deferred.resolve();
@@ -182,8 +183,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     $scope.requestText = 'Add to Server Queue';    
   }
   
-  $scope.testText = '<b>Bolder</b> CO, <i>RULES</i>';
-
   wDB.waitFor('loaded').then(r => {
     $scope.o      = wData;                // For html page
     $scope.months = wData.months;

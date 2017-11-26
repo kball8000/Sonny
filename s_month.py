@@ -75,7 +75,8 @@ def get_urls_to_update(month):
     i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
-    calls_reserved      = 2
+    calls_reserved      = 7         # TESTING
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
@@ -135,7 +136,8 @@ def update_month(month, urls):
         urlfetch.make_fetch_call(rpc, url)
         rpcs.append(rpc)
 
-    logging.info('Requests sent, now we wait...')
+    if len(urls):
+        logging.info('Requests sent, now we wait...')
 
     for rpc in rpcs:
         rpc.wait()
@@ -171,7 +173,8 @@ def update_month(month, urls):
 def create_month_id(_zip, yr, mon):
     return 'month-' + _zip + '-' + str(yr) + str(mon).zfill(2)
 def update_end_month(month, end):
-    """ End month being one of the non-current months at the beginning and end of a calendar page. new_info should mostly imitate data sent in http request form webpage. """
+    """ End month being one of the non-current months at the beginning and end of a calendar page. 
+    new_info should mostly imitate data sent in http request form webpage. """
 
     _zip    = month.info['zip']
     yr      = month.info['year']
@@ -221,21 +224,24 @@ def update_end_month(month, end):
     
     return obj
 def save_month(_month):
-    month_complete, month_updated = True, False
+    # month_complete, month_updated = True, False
+    # Assume these next 2 statements and verify in next steps.
+    _month.info['complete'] = True
+    _month.info['updated']  = False
     cal = _month.info['weather']['cal']
 
     for week in cal:
         for day in week:
-            if day['updated'] and not month_updated:
-                month_updated = True
-            if not day['complete'] and month_complete:
-                month_complete = False
+            if day['updated'] and not _month.info['updated']:
+                _month.info['updated']  = True
+            if not day['complete'] and _month.info['complete']:
+                _month.info['complete'] = False
             day['updated'] = False
     
-    if month_complete:
-        _month.info['complete'] = True
-        w = _month.info['weather']
-        i = 0
+    if _month.info['complete']:
+        # _month.info['complete'] = True
+        w       = _month.info['weather']
+        num_days = 0
         current_month = int(_month.info['id'][-2:])
         for week in cal:
             for day in week:
@@ -245,18 +251,46 @@ def save_month(_month):
                     w['heatingdegreedays']  += int(day['heatingdegreedays'])
                     w['coolingdegreedays']  += int(day['coolingdegreedays'])
                     w['mean_temp']          += float(day['mean_temp'])
-                    i += 1
+                    num_days                 += 1
                     
         w['totalrainfall']  = round(w['totalrainfall'], 2)
         w['totalsnowfall']  = round(w['totalsnowfall'], 2)
-        w['mean_temp']      = round(w['mean_temp']/i, 1)
+        w['mean_temp']      = round(w['mean_temp']/num_days, 1)
 
-    if month_updated:
+    if _month.info['updated']:
         models.Forecast.put(_month)
+def verify_html(_month):
+    HTML_VERSION = '0.1'
+    old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
+
+    # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
+    if (old_version or _month.info['updated']):
+        cal = _month.info['weather']['cal']
+        current_month = int(_month.info['id'][-2:])
+
+        for week in cal:
+            for day in week:
+                if day['updated'] or old_version:
+                    day['html'] = "<span class='"
+                    day['html'] += 'dayHeader' if day['date'][1] == current_month else 'noncurrent'
+                    day['html'] += "'>" + str(day['date'][2]) + '</span>'
+
+                    if 'high' in day:
+                        day['html'] += '<br>H <b>' + day['high'] + '&deg</b><br>L <b>' + day['low'] + '&deg</b>';
+                        day['html'] += '<br>Rain ' + day['precip'] + '"' if day['rain'] == '1' else ''
+                        day['html'] += '<br>Snow ' + day['snowfall'] + '"' if day['snow'] == '1' else ''
+                    else:
+                        day['html'] += '<br>H<br>L';
+
+                    _month.info['updated'] = True
+
+        _month.info['html_version'] = HTML_VERSION
+
+    return _month 
 def get_month(info):
     info['id'] = create_month_id(info['zip'], info['year'], info['month'])
-    save, months = False, []
-
+    # save, months = False, []
+    months = []
     m_0 = {}                                        # TESTING
     count = 0                                       # TESTING
 
@@ -272,6 +306,19 @@ def get_month(info):
         months.append(update_end_month(month, end=False))
         months.append(update_end_month(month, end=True))
         for m in months:
+
+            # FIX THIS. I NEED TO CHECK THE HTML VERSION OUTSIDE OF UPDATING DATA FROM WU,
+            # OTHERWISE IT IS LOCKED IN THAT VERSION ONCE MONTH IS COMPLETE.
+
+
+            m = verify_html(m)
+            save_month(m)
+
+
+    if not len(months):
+        m = verify_html(month)
+        logging.info('updated: : %s' %m.info['updated'])
+        if m.info['updated']:
             save_month(m)
     
     # return month                                  # Comment is TESTING 

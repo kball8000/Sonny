@@ -1,6 +1,5 @@
 <div ng-controller='monthCtrl'>
   <span ng-if='o.info.month.message'> {{o.info.month.message}} </span>
-  <p ng-bind-html="testText"></p>
   <md-card>
     <md-card-content id='monthInputContent'>
         <div layout="row" id='monthInputCard'>
@@ -68,7 +67,8 @@
               <div>
                 <!-- {{day.high|dayweather}} -->
                 <!-- {{day.high|nf}} -->
-                <span ng-bind-html="day.displayText"></span>
+                <!-- <span ng-bind-html="day.displayText"></span> -->
+                <span ng-bind-html="day.html"></span>
                 <!-- {{day.date[2]}}<br>
                 <span ng-show="day.high">H {{day.high}}&deg;<br></span>
                 <span ng-show="day.low">L {{day.low}}&deg;<br></span>

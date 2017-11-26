@@ -3,7 +3,8 @@
         ng-show="o.radarRequestTS[o.info.radarUser.id]">
         Loading...
   </div>
-  <p ng-show='o.info.radar.expiredMsg'>Radar image {{o.info.radar.expiredMsg}} </p>
+  <p ng-show='o.info.radar.expiredMsg' class='expiredMsg'>
+    Radar image {{o.info.radar.expiredMsg}} </p>
   <img ng-src='{{o.info.radar.imgUrl}}' 
        ng-show='o.info.radar.img'/>
 
