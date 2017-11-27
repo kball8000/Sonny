@@ -715,7 +715,7 @@ var app = angular.module('weatherServices', [])
       }
     }
 
-    if (view !== month) {
+    if (view !== 'month') {
       wData.updateExpiredMsg(view);
     } 
   }
@@ -750,13 +750,13 @@ var app = angular.module('weatherServices', [])
             wDB._put(wData.info.id, wData.info);
           } // Could have done else > cache for later, but seemed super rare case and more code.
         } catch(e) {
-          wLog.log('error', 'httpReq ' + view + ' success, but catch on updatingView');
+          wLog.log('error', 'httpReq ' + view + ' success, but catch on updatingView, error: ' + e);
         }
 
         wData.setSpinner(view, false, spinnerId);
 
       }, e => {
-        wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ', navigator.onLine);
+        wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ' + navigator.onLine + ', error: ' + e);
         wData.setSpinner(view, false, spinnerId);
       })
     }
