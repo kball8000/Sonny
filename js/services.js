@@ -390,7 +390,7 @@ var app = angular.module('weatherServices', [])
 })
 .service('wDB', function($q, $interval, wDates){
   const DB_NAME     = 'weatherDB';
-  const DB_VERSION  = 2;  // long long integer, so can be up to a very large integer.
+  const DB_VERSION  = 3;  // long long integer, so can be up to a very large integer.
   
   var db = {};
   var checks = {open: false, loaded: false};
