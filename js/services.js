@@ -391,6 +391,18 @@ var app = angular.module('weatherServices', [])
 .service('wDB', function($q, $interval, wDates){
   const DB_NAME     = 'weatherDB';
   const DB_VERSION  = 3;  // long long integer, so can be up to a very large integer.
+  // const WEATHER_DB_VERSION = '0.0.1'
+  // const STORE_NAME = 'weather'
+  // MAYBE JUST CREATE A NEW STORE NAME IF YOU CHANGE PARAMETERS BREAKING THE OLD DB.
+
+  // CREATE A LIST OF DEPRECATED STORE_NAMES AND CYCLE THRU THEM TO DELETE WHAT IS NEEDED.
+  // ONUPGRADENEEDED, USE e.target.result.objectStoreNames (.contains(latest_store_name) SINCE
+  // IT IS A DOMSTRINGLIST AND NOT AN ARRAY) TO 
+  // DETERMINE IF I NEED TO CREATE THE DATASTORE NAME.
+  // DEPRECATED LIST WILL BE REQUIRED IF I MAKE BREAKING CHANGE TO THE DATA STRUCTURE.
+  
+  // ALSO CONSIDER indexedDB.deleteDatabase(databaseName) IF I JUST WANT TO TOTALLY START OVER, BUT 
+  // NEED TO FIGURE OUT HOW I WOULD KNOW TO DELETE.
   
   var db = {};
   var checks = {open: false, loaded: false};
@@ -400,6 +412,9 @@ var app = angular.module('weatherServices', [])
     var request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onsuccess = function(e){
       db = this.result;
+      // BELOW CLEARS THE DATASTORE, NEED TO FIGURE OUT HOW TO RUN IT BASED ON SOME SORT OF VERSION.
+      // db.transaction('weather', 'readwrite').objectStore('weather').clear();
+
       checks.open = true;
       defer.resolve();
     }
@@ -409,6 +424,16 @@ var app = angular.module('weatherServices', [])
     
     request.onupgradeneeded = function(e){
       var db = e.target.result;
+      // console.log('db: ', db);
+      // console.log('objectstorenames: ', db.objectStoreNames);
+      // let li = db.objectStoreNames;
+      // console.log('first el: ', li[0], 'length: ', li.length, ', array? ', Array.isArray(li));
+      // if (li.contains('weather')) {
+      //   console.log('weather exists!!4!!!');
+      //   // db.createObjectStore('weather1', {keyPath: 'id'})
+      // } else {
+      //   console.log('weather DOES NOT exist!');
+      // }
       var wStore = db.createObjectStore('weather', {keyPath: 'id'});
     }
     return defer.promise;
