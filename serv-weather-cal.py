@@ -73,6 +73,12 @@ def conv_py_date(d, _typ): # Keep here
         li      = [str(d).zfill(2) for d in _d]
         _d      = _str.join(li)
     return _d
+def trim_month(d):
+    """ Shortens month in date string to 3 character. """
+    # sample date string: Last Updated on June 27, 5:27 PM PDT
+    li = d.split(' ')
+    li[3] = li[3][:3]
+    return ' '.join(li)
 
 def process_current(raw):
     """This includes both current conditions and hourly forecast"""
@@ -87,6 +93,7 @@ def process_current(raw):
     d['wind']       = str(c['wind_mph']) 
     d['winddir']    = c['wind_dir']
     d['icon_url']   = c['icon_url'].replace('http://', 'https://')
+    d['observation_time']   = trim_month(c['observation_time'])
 
     f = raw['forecast']['simpleforecast']['forecastday']
     d['high']           = f[0]['high']['fahrenheit']
@@ -131,13 +138,13 @@ def process_current(raw):
             hr = 12
         elif hr > 12:
             hr = hr -12
-        _h['hour'] = str(hr) + ' ' + t['FCTTIME']['ampm']
-        _h['temp'] = t['temp']['english']
-        _h['feels'] = t['feelslike']['english']
-        _h['precipchance'] = t['pop']
-        _h['condition'] = t['condition']
-        _h['icon_url']   = t['icon_url'].replace('http://', 'https://')
-        _h['wind'] = str(t['wspd']['english']) + ' ' + t['wdir']['dir']
+        _h['hour']          = str(hr) + ' ' + t['FCTTIME']['ampm']
+        _h['temp']          = t['temp']['english']
+        _h['feels']         = t['feelslike']['english']
+        _h['precipchance']  = t['pop']
+        _h['condition']     = t['condition']
+        _h['icon_url']      = t['icon_url'].replace('http://', 'https://')
+        _h['wind']          = str(t['wspd']['english']) + ' ' + t['wdir']['dir']
         h.append(_h)
     return {'current': d, 'hourly': h}
 def process_tenday(raw):

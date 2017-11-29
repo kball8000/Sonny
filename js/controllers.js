@@ -103,6 +103,22 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();      
   }
+  $scope.addErrors = () => {
+    wData.info.current.expiredMsg = 'currentExpired';
+    wData.info.hourly.expiredMsg = 'hourlyExpired';
+    wData.info.tenday.expiredMsg = 'tendayExpired';
+    wData.info.current.errorMsg = 'currentError';
+    wData.info.hourly.errorMsg = 'hourlyError';
+    wData.info.tenday.errorMsg = 'tendayError';
+  }
+  $scope.clearErrors = () => {
+    wData.info.current.expiredMsg = '';
+    wData.info.hourly.expiredMsg = '';
+    wData.info.tenday.expiredMsg = '';
+    wData.info.current.errorMsg = '';
+    wData.info.hourly.errorMsg = '';
+    wData.info.tenday.errorMsg = '';
+  }
   function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
     navigator.geolocation.getCurrentPosition(function(position) {
       autocomp.getCityFromGeo(position.coords.latitude, position.coords.longitude);

@@ -149,8 +149,12 @@ height: 1.5em;
 
 /* Refinements */
 .expiredMsg {
-  padding-left: 1em;
-  background-color: lightyellow;
+  background-color: rgb(200,200,0);
+}
+.errorMsg {
+  color: rgb(255,255,255);
+  font-weight: bold;
+  background-color: rgb(255,130,0);
 }
 [ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
   display: none !important;

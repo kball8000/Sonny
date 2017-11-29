@@ -6,9 +6,16 @@
   </div>
   
   <div ng-show='!o.info.tenday.spinner'>
-    <p ng-show='o.info.tenday.ExpiredMsg' class='expiredMsg'>
-      Ten day forecast {{o.info.tenday.ExpiredMsg}}
-    </p>
+
+    <md-list ng-show='o.info.tenday.expiredMsg || o.info.tenday.errorMsg'>
+      <md-list-item ng-show='o.info.tenday.expiredMsg' class='expiredMsg'>
+        <p> Tenday forecast {{o.info.tenday.expiredMsg}} </p>
+      </md-list-item>
+      <md-list-item ng-show='o.info.tenday.errorMsg' class='errorMsg'>
+        <p> {{o.info.tenday.errorMsg}} </p>
+      </md-list-item>
+    </md-list>
+    
     <ul class="list-group">
       <li class="list-group-item" 
           ng-repeat='day in o.info.tenday.weather' 

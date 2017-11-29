@@ -669,12 +669,12 @@ var app = angular.module('weatherServices', [])
             if(newRadar.id === requestedId){
               updateViewData('radar', newRadar);
               wDB._put(wData.info.id, wData.info);
-              wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
-            } else {                                // CONSIDER REPLACING WITH BELOW
-              wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
+              // wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
+            // } else {                                // CONSIDER REPLACING WITH BELOW
+              // wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
             }
-            // wDB._put(newRadar.id, newRadar);        // CONSIDER REPLACING ABOVE WITH THIS LINE.
-
+            wDB._put(newRadar.id, newRadar);        // CONSIDER REPLACING ABOVE WITH THIS LINE.
+            wData.info.radar.errorMsg = '';
           } else {
             wData.info.radar.errorMsg = r.headers('X-Werror');
           }
@@ -700,7 +700,7 @@ var app = angular.module('weatherServices', [])
       wData.info.radar = newData;
       console.log('Date.now(): ', Date.now());
       console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
-      
+      wData.updateExpiredMsg('radar');
     } else if(view === 'month') {
       console.log('updateviewdata, obj.weather > newdata: ', newData);
       obj.complete = newData.complete;
@@ -712,12 +712,10 @@ var app = angular.module('weatherServices', [])
       } else {
         obj.weather     = newData[view];
         obj.lastUpdated = Date.now();
+        obj.errorMsg    = '';
+        wData.updateExpiredMsg(view);
       }
     }
-
-    if (view !== 'month') {
-      wData.updateExpiredMsg(view);
-    } 
   }
   function refreshView(view) {
     /**
@@ -866,7 +864,7 @@ var app = angular.module('weatherServices', [])
 
           // WORKING HERE / TESTING. TRY TO FIGURE OUT HOW TO TEST IF URL IS STILL OK BEFORE CREATING A NEW URL.
 
-          r.value.imgUrl            = URL.createObjectURL(r.value.img);
+          r.value.imgUrl    = URL.createObjectURL(r.value.img);
           console.log('image url for wDB image', r.value.imgUrl); 
           wData.info.radar  = r.value;
           wData.updateExpiredMsg('radar');
