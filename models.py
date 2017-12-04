@@ -34,12 +34,12 @@ def valid_data(data, view=None):
             pass
     else:   # month
         is_valid = True
-#        pass
     
     return is_valid
 
 def get_id(info):
-    """ Recreating the id, even though this is done in javascript (JS), it is not always identical. JS only has weather, python stores current and tenday independently. """
+    """ Recreating the id, even though this is done in javascript (JS), it is not always identical. 
+        JS only has weather, python stores current and tenday independently. """
 
     _id = info['view'] + '-' + info['zip']
 
@@ -95,6 +95,12 @@ class Radar(ndb.Model):
     def w_put_async(self, obj):
         return obj.put_async() if valid_data(obj, 'radar') else None
 
+def log_dates(dates):
+    i = 5 if len(dates) > 4 else len(dates)
+
+    for x in xrange(i):
+        logging.info('beginning 5 dates %s: %s' %(x+1, dates[x]))
+        logging.info('ending    5 dates %s: %s'   %(-(x+1), dates[-(x+1)]))
 
 class APILock(ndb.Model):
     """This limits API use so I do not go over weather underground quota and with enough overages, eventually lose API key.  When retreiving lock from datastore assume we will get to use a date, so add a placeholder to the list. If main program decides it is unavailable, remove the placeholder date. Lock is used for data consistency, since main program is multithreaded."""
@@ -111,8 +117,12 @@ class APILock(ndb.Model):
             else:
                 del self._lock.dates[:-500]
 
+            logging.info('\n\nSTARTING, num dates: %s, calls: %s' %(len(self._lock.dates), calls))
+            # log_dates(self._lock.dates)
             for x in xrange(calls):
                 self._lock.dates.append(datetime.utcnow())
+            logging.info('ENDING, num dates: %s' %len(self._lock.dates))
+
             self._lock.put()
 
         return self._lock.dates
@@ -122,6 +132,8 @@ class APILock(ndb.Model):
         with self._api_lock:
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
             for date in dates:
+                logging.info('removing date: %s' %date)
                 self._lock.dates.remove(date)
+            logging.info('after removing dates, length: %s' %len(self._lock.dates))
             self._lock.put()
         return True

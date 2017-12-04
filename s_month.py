@@ -15,6 +15,8 @@ import logging
 def process_day(day, data):
     day['high']                 = data['maxtempi']
     day['low']                  = data['mintempi']
+
+    # WU will report 'trace' for precip and rain, setting to 0, so it doesn't break summing.
     p = data['precipi']
     day['precip']               = p if p != 'T' else '0'
     s = data['snowfalli']
@@ -22,12 +24,16 @@ def process_day(day, data):
     day['snow_depth']           = data['snowdepthi']
     day['rain']                 = data['rain']
     day['snow']                 = data['snow']
+
     day['mean_temp']            = data['meantempi']
+    day['humidity']             = data['humidity']
     day['mean_wind_dir']        = data['meanwdird']
     day['mean_wind_speed']      = data['meanwindspdi']
-    day['humidity']             = data['humidity']
+
     day['heatingdegreedays']    = data['heatingdegreedays']
     day['coolingdegreedays']    = data['coolingdegreedays']
+
+    day['html']                 = ''
     day['updated']              = True
     
     # Only mark complete if not close to today. WU will report before day is over
@@ -61,29 +67,31 @@ def create_month(info):
             week.append(obj)
     cal.append(week)
     
-    info['weather']                         = {}
-    info['weather']['totalrainfall']        = 0
-    info['weather']['totalsnowfall']        = 0
-    info['weather']['mean_temp']            = 0
-    info['weather']['coolingdegreedays']    = 0
-    info['weather']['heatingdegreedays']    = 0
-    info['weather']['cal']                  = cal
-    
+    info['cal']     = cal
+    info['weather'] = {
+        'totalrainfall':        0.0,
+        'totalsnowfall':        0.0,
+        'mean_temp':            0.0,
+        'coolingdegreedays':    0,
+        'heatingdegreedays':    0
+    }
+
+
     return models.Forecast.new_obj(info)
 def get_urls_to_update(month): 
     """ There are 2 reasons to return dates, api usage restriction from weather underground, 
     i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
-    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
     temp_dates          = [dates.pop() for x in xrange(calls_requesting)]
     
     _zip                = month.info['zip']
-    cal                 = month.info['weather']['cal']
+    cal                 = month.info['cal']
     urls                = []
 
     # Now check how many calls are actually available and return the rest.
@@ -117,9 +125,7 @@ def get_urls_to_update(month):
     return urls
 def update_month(month, urls):
     rpcs, results   = [], []
-    cal             = month.info['weather']['cal']
-
-    count           = 0     # TESTING
+    cal             = month.info['cal']
 
     def handle_rpc(rpc):
         r = rpc.get_result()
@@ -142,7 +148,7 @@ def update_month(month, urls):
     for rpc in rpcs:
         rpc.wait()
     
-    logging.info('Requests from WU COMPLETE')
+    logging.info('Requests from WU COMPLETE\n\n')
 
     for week in cal:
         for day in week:
@@ -158,18 +164,13 @@ def update_month(month, urls):
                     try:
                         r = result['history']['dailysummary'][0]
                         day = process_day(day, r)
-                        
-                        count += 1  # TESTING
-
-                        # NOT SURE IF THIS IS GOOD PYTHON... I'M GUESSING I VERIFIED AT THE TIME OF WRITING IT.
                         results.remove(result)
                     except:
                         logging.info('could not get weather')
             if not len(results):
                 break
     
-    # return month
-    return month, count     # TESTING
+    return month
 def create_month_id(_zip, yr, mon):
     return 'month-' + _zip + '-' + str(yr) + str(mon).zfill(2)
 def update_end_month(month, end):
@@ -206,8 +207,8 @@ def update_end_month(month, end):
     if not obj:
         obj = create_month(new_info)
 
-    current_cal     = month.info['weather']['cal']
-    non_current_cal = obj.info['weather']['cal']
+    current_cal     = month.info['cal']
+    non_current_cal = obj.info['cal']
     if end:
         last_row        = len(current_cal) - 1
         current_row     = current_cal[last_row]
@@ -228,8 +229,9 @@ def save_month(_month):
     # Assume these next 2 statements and verify in next steps.
     _month.info['complete'] = True
     _month.info['updated']  = False
-    cal = _month.info['weather']['cal']
+    cal = _month.info['cal']
 
+    # Determine if month is updated and/or complete.
     for week in cal:
         for day in week:
             if day['updated'] and not _month.info['updated']:
@@ -238,61 +240,92 @@ def save_month(_month):
                 _month.info['complete'] = False
             day['updated'] = False
     
-    if _month.info['complete']:
-        # _month.info['complete'] = True
-        w       = _month.info['weather']
-        num_days = 0
-        current_month = int(_month.info['id'][-2:])
-        for week in cal:
-            for day in week:
-                if current_month == day['date'][1]:
-                    w['totalrainfall']      += float(day['precip'])
-                    w['totalsnowfall']      += float(day['snowfall'])
-                    w['heatingdegreedays']  += int(day['heatingdegreedays'])
-                    w['coolingdegreedays']  += int(day['coolingdegreedays'])
-                    w['mean_temp']          += float(day['mean_temp'])
-                    num_days                 += 1
+    # TODO CHANGE THIS SO THAT IT WORKS EVEN WHEN NOT MONTH COMPLETE
+    # if _month.info['complete']:
+    w               = _month.info['weather']
+    current_month   = int(_month.info['id'][-2:])
+    num_days        = 0.0
+
+    # logging.info('wmeantemp: %s, type: %s' %(w['mean_temp'], type(w['mean_temp'])))
+    # w['mean_temp'] = float(w['mean_temp'])
+    # Not 100% sure why, but seem to need to reset these to 0.
+    w['mean_temp'] = 0.0
+    w['totalrainfall']  = 0.0
+    w['totalsnowfall']  = 0.0
+    w['coolingdegreedays'] = 0
+    w['heatingdegreedays'] = 0
+
+    for week in cal:
+        for day in week:
+            if current_month == day['date'][1] and day['complete']:
+                w['totalrainfall']      += float(day['precip'])
+                w['totalsnowfall']      += float(day['snowfall'])
+                w['heatingdegreedays']  += int(day['heatingdegreedays'])
+                w['coolingdegreedays']  += int(day['coolingdegreedays'])
+                w['mean_temp']          += float(day['mean_temp'])
+                num_days                 += 1
                     
-        w['totalrainfall']  = round(w['totalrainfall'], 2)
-        w['totalsnowfall']  = round(w['totalsnowfall'], 2)
-        w['mean_temp']      = round(w['mean_temp']/num_days, 1)
+    w['totalrainfall']  = round(w['totalrainfall'], 2)
+    w['totalsnowfall']  = round(w['totalsnowfall'], 2)
+    w['mean_temp']      = round(w['mean_temp']/num_days, 1) if num_days else 0.0
 
     if _month.info['updated']:
+        _month.info['updated'] = False
         models.Forecast.put(_month)
-def verify_html(_month):
-    HTML_VERSION = '0.1'
+def build_html_table(_month):
+    HTML_VERSION = '0.1q'
     old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
 
     # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
     if (old_version or _month.info['updated']):
-        cal = _month.info['weather']['cal']
-        current_month = int(_month.info['id'][-2:])
+        cal             = _month.info['cal']
+        current_month   = int(_month.info['id'][-2:])
+        html            = ""
+        headers         = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        week_html       = ''
+
+        html += "<table class='table'>\n  <tr>\n    "
+        for h in headers:
+            html += '<th>'+ h +'</th> '
+        html += '\n  </tr>\n'
 
         for week in cal:
+            week_html = '  <tr>'
             for day in week:
                 if day['updated'] or old_version:
-                    day['html'] = "<span class='"
+                    day['html'] = "    <td><span class='"
                     day['html'] += 'dayHeader' if day['date'][1] == current_month else 'noncurrent'
                     day['html'] += "'>" + str(day['date'][2]) + '</span>'
 
                     if 'high' in day:
-                        day['html'] += '<br>H <b>' + day['high'] + '&deg</b><br>L <b>' + day['low'] + '&deg</b>';
+                        day['html'] += '<br>H <b>' + day['high'] + '&deg;</b><br>L <b>' + day['low'] + '&deg;</b>';
                         day['html'] += '<br>Rain ' + day['precip'] + '"' if day['rain'] == '1' else ''
                         day['html'] += '<br>Snow ' + day['snowfall'] + '"' if day['snow'] == '1' else ''
                     else:
                         day['html'] += '<br>H<br>L';
+                    day['html'] += '</td>'
 
                     _month.info['updated'] = True
+                week_html += '\n' + day['html']
+            html += week_html + '\n' + '  </tr>' + '\n'
 
+        html += '</table>'
+
+        _month.info['weather']['html']   = html
         _month.info['html_version'] = HTML_VERSION
+
+        # for k, v in _month.info.iteritems():
+        #     logging.info('key: %s' %(k))
+            # logging.info('key: %s, value: %s' %(k,v))
+        # logging.info('weather below:')
+        # for key in _month.info['weather']:
+        #     logging.info('key: %s' %(key))
 
     return _month 
 def get_month(info):
     info['id'] = create_month_id(info['zip'], info['year'], info['month'])
     # save, months = False, []
     months = []
-    m_0 = {}                                        # TESTING
-    count = 0                                       # TESTING
 
     month = models.Forecast.get(info)
     if not month:
@@ -300,26 +333,19 @@ def get_month(info):
 
     if not month.info['complete']:
         urls = get_urls_to_update(month)
-        m_0, count = update_month(month, urls)     # TESTING 
-        months.append(m_0)                          # TESTING 
-        # months.append(update_month(month, urls))  # Comment is TESTING 
+        months.append(update_month(month, urls))
         months.append(update_end_month(month, end=False))
         months.append(update_end_month(month, end=True))
+
         for m in months:
-
-            # FIX THIS. I NEED TO CHECK THE HTML VERSION OUTSIDE OF UPDATING DATA FROM WU,
-            # OTHERWISE IT IS LOCKED IN THAT VERSION ONCE MONTH IS COMPLETE.
-
-
-            m = verify_html(m)
+            m = build_html_table(m)
             save_month(m)
 
 
     if not len(months):
-        m = verify_html(month)
+        m = build_html_table(month)
         logging.info('updated: : %s' %m.info['updated'])
         if m.info['updated']:
             save_month(m)
     
-    # return month                                  # Comment is TESTING 
-    return month, count
+    return month                                  # Comment is TESTING 

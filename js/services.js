@@ -180,11 +180,10 @@ var app = angular.module('weatherServices', [])
       complete:   false,
       id:         data.createMonthId(zip, yr, mon),
       // timeout:    null,
-      weather:    {} // includes calendar and monthly totals.
+      weather:    {} // includes html calendar and monthly totals.
     }
   }
-  data.concatDayText      = function(m) {
-    // DEPRECATED, MOVING TO SERVER IN 1.28g.
+  data.concatDayText      = function(m) {   // DEPRECATED, MOVING TO SERVER IN 1.28g.
     // month
     //  displayVersion
     //  weather
@@ -221,7 +220,6 @@ var app = angular.module('weatherServices', [])
 
     return m;
   }
-
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
         width   = screen.width,
@@ -389,8 +387,10 @@ var app = angular.module('weatherServices', [])
   return data;
 })
 .service('wDB', function($q, $interval, wDates){
-  const DB_NAME     = 'weatherDB';
-  const DB_VERSION  = 3;  // long long integer, so can be up to a very large integer.
+  const DB_NAME           = 'weatherDB';
+  const DB_VERSION        = 5;            // long long integer, so can be up to a very large integer.
+  const STORE_NAME        = 'weather0';
+  const DEPRECATED_STORES = ['weather']
   // const WEATHER_DB_VERSION = '0.0.1'
   // const STORE_NAME = 'weather'
   // MAYBE JUST CREATE A NEW STORE NAME IF YOU CHANGE PARAMETERS BREAKING THE OLD DB.
@@ -400,7 +400,7 @@ var app = angular.module('weatherServices', [])
   // IT IS A DOMSTRINGLIST AND NOT AN ARRAY) TO 
   // DETERMINE IF I NEED TO CREATE THE DATASTORE NAME.
   // DEPRECATED LIST WILL BE REQUIRED IF I MAKE BREAKING CHANGE TO THE DATA STRUCTURE.
-  
+
   // ALSO CONSIDER indexedDB.deleteDatabase(databaseName) IF I JUST WANT TO TOTALLY START OVER, BUT 
   // NEED TO FIGURE OUT HOW I WOULD KNOW TO DELETE.
   
@@ -421,7 +421,6 @@ var app = angular.module('weatherServices', [])
     request.onerror = function(e){
       defer.reject();
     }
-    
     request.onupgradeneeded = function(e){
       var db = e.target.result;
       // console.log('db: ', db);
@@ -434,7 +433,23 @@ var app = angular.module('weatherServices', [])
       // } else {
       //   console.log('weather DOES NOT exist!');
       // }
-      var wStore = db.createObjectStore('weather', {keyPath: 'id'});
+      // var wStore = db.createObjectStore('weather', {keyPath: 'id'});
+
+      // let currentStores     = db.objectStoreNames;
+          // latestStores      = ['weather0'],
+          // deprecatedStores  = ['weather'];
+
+      for (let store of DEPRECATED_STORES) {
+        if (db.objectStoreNames.contains(store)) {
+          console.log('will remove store: ', store);
+          db.deleteObjectStore(store);
+        }
+      }
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        console.log('will add store: ', STORE_NAME);
+        db.createObjectStore(STORE_NAME, {keyPath: 'id'});
+      }
+      // db.createObjectStore('weather', {keyPath: 'id'});
     }
     return defer.promise;
   }
@@ -468,8 +483,10 @@ var app = angular.module('weatherServices', [])
   this._put = function(id, value) {
     this.waitFor('open').then(r => {
       // var request = db.transaction(['weather'], 'readwrite')
-      db.transaction(['weather'], 'readwrite')
-      .objectStore('weather')
+      //                 .objectStore('weather')
+      //                 .put({id: id, value: value});
+      db.transaction([STORE_NAME], 'readwrite')
+      .objectStore(STORE_NAME)
       .put({id: id, value: value});
     })
   }
@@ -477,8 +494,8 @@ var app = angular.module('weatherServices', [])
     var deferred = $q.defer();
     
     function get_val(){
-      var request = db.transaction(['weather'], 'readonly')
-      .objectStore('weather')
+      var request = db.transaction([STORE_NAME], 'readonly')
+      .objectStore(STORE_NAME)
       .get(id);
       
       request.onsuccess = function(r){
@@ -497,8 +514,8 @@ var app = angular.module('weatherServices', [])
     var deferred = $q.defer();
 
     function get_val(){
-      var request = db.transaction(['weather'], 'readonly')
-      .objectStore('weather')
+      var request = db.transaction([STORE_NAME], 'readonly')
+      .objectStore(STORE_NAME)
       .getAll();
       
       request.onsuccess = function(r){
@@ -518,8 +535,8 @@ var app = angular.module('weatherServices', [])
     function removeElem(id){
       view += '_DB';
       if(wDates.isExpired(timestamp, view)) {
-          request = db.transaction(['weather'], 'readwrite')
-        .objectStore('weather')
+          request = db.transaction([STORE_NAME], 'readwrite')
+        .objectStore(STORE_NAME)
         .delete(id); 
       }
     }
@@ -646,6 +663,7 @@ var app = angular.module('weatherServices', [])
       data.id = wData.info.id;
       _url    = '/getweather';
     }
+    // TODO TESTING: MOVE URL = ...ORIGIN TO TOP AND DO A URL += IN THE IF'S
     let url = window.location.origin + _url;
     return $http.post(url, data, config); 
   }
@@ -725,7 +743,7 @@ var app = angular.module('weatherServices', [])
       wData.info.radar = newData;
       console.log('Date.now(): ', Date.now());
       console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
-      wData.updateExpiredMsg('radar');
+      // wData.updateExpiredMsg('radar');
     } else if(view === 'month') {
       console.log('updateviewdata, obj.weather > newdata: ', newData);
       obj.complete = newData.complete;
@@ -738,7 +756,7 @@ var app = angular.module('weatherServices', [])
         obj.weather     = newData[view];
         obj.lastUpdated = Date.now();
         obj.errorMsg    = '';
-        wData.updateExpiredMsg(view);
+        // wData.updateExpiredMsg(view);
       }
     }
   }
@@ -746,6 +764,11 @@ var app = angular.module('weatherServices', [])
     /**
      * This refreshes Now / Hourly / Tenday tabs.
      */
+    function updateExpiredMsg() {
+      if (view !== 'month') {
+        wData.updateExpiredMsg(view);
+      }
+    }
 
     let expiredData     = wDates.isExpired(wData.info[view].lastUpdated, view),
         recentCheck     = wDates.recentCheck(wData.info[view].lastChecked, view),
@@ -757,6 +780,7 @@ var app = angular.module('weatherServices', [])
     if(expiredData){
       // Stops spinner from going all the time on a bad network connection / slow device.      
       if (!recentCheck) {
+        console.log('starting spinner for ', view);
         spinnerId = wData.setSpinner(view, true);
       }
 
@@ -776,11 +800,18 @@ var app = angular.module('weatherServices', [])
           wLog.log('error', 'httpReq ' + view + ' success, but catch on updatingView, error: ' + e);
         }
 
+        updateExpiredMsg();
         wData.setSpinner(view, false, spinnerId);
 
+        // console.log('end of requestView try');
       }, e => {
         wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ' + navigator.onLine + ', error: ' + e);
+        updateExpiredMsg();
         wData.setSpinner(view, false, spinnerId);
+      // }, () => {
+      //   console.log('finally of requestView try');
+      //   updateExpiredMsg();
+      //   wData.setSpinner(view, false, spinnerId);        
       })
     }
   }
@@ -788,14 +819,6 @@ var app = angular.module('weatherServices', [])
 
     // ADD EXPIRED STUFF HERE TO AVOID FLASHING SCREEN ???
 
-    function convert_month(month){
-      /* for each day in the calendar convert the month val from wu/python to JS. */
-      for(let week of month.weather.cal) {
-        for(let day of week){
-          day.date[1]--;  // convert from wu/python month to javascript, i.e. Jan=0
-        }
-      }
-    }
     function createNewMonth(data) {
       /* Create a month object for storing in the DB. Do this to avoid async problem with what is
        in the main weather.month object vs the month of the returned data */
@@ -810,46 +833,17 @@ var app = angular.module('weatherServices', [])
       return newMonth;
     }
 
-    function numCompleteDays() {    // TESTING
-      let m     = wData.info.month.weather,
-          regex = /^-?\d+/,
-          count = 0;
-
-      if (m.cal) {
-        for(let week of m.cal) {
-          for (let day of week) {
-            if (regex.test(day.high)) {
-              count++;
-            }
-          }
-        }  
-      }
-      return count;
-    }
-
-    let t0    = Date.now(),    // TESTING
-        count = 0;          // TESTING
-
     httpReq('month').then(r => {
       console.log('httpReq(month).then(r =>', r);
       var month = wData.info.month;
       try{
-        convert_month(r.data);  // convert back to javascript monthtype, Jan = 0.
         if (month.id === r.data.id){
           console.log('month ids are equal, month', month);
-          console.log('server request duration: ', r.data.request_duration, ', count: ', r.data.count);
-          count = numCompleteDays();
-          console.log('count from numCompleteDays()', count);
           // Update Screen
           // Does update view convert month back to JS??? Seems to be working 11/26/17.
 
-          // r.data = wData.concatDayText(r.data);
           updateViewData('month', r.data);
           console.log('just ran updateViewData');
-          let t1 = Math.round((Date.now() - t0)/10)/100;
-          wData.setDurations(t1, (numCompleteDays() - count));
-          console.log('just ran setDurations');
-          console.log('local request duration: ', wData.requestDurations[0]);
 
           wData.info.month.lastSuccessfulCheck = Date.now();
 
@@ -865,7 +859,7 @@ var app = angular.module('weatherServices', [])
       }
     }, e => { 
       wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
-      console.log('Failed to update Month with successful server request data.');
+      console.log('Failed to update Month with failed server request.');
     })
   }
   function refreshRadar() {
@@ -937,14 +931,12 @@ var app = angular.module('weatherServices', [])
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');
       
-    } else {    // Month
+    } else if(view === 'month'){
       /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
       let month   = wData.info.month;
       let expired = wDates.isExpired(month.lastSuccessfulCheck, 'month');
-      // $timeout.cancel(month.timeout);    // Do not think I'm setting timeouts anymore.
 
       if(!month.complete || expired){
-        // month.retries = 5;
         refreshMonth();
       }
       $timeout(refreshView, 1000, true, 'current');

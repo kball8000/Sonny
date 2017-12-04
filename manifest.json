@@ -1,5 +1,6 @@
 {
     "name": "Sonny",
+    "short_name": "Sonny",
     "start_url": "/current",
     "scope": "/",
     "icons": [
@@ -11,6 +12,11 @@
         {
             "src": "/images/android-chrome-256x256.png?v=1a",
             "sizes": "256x256",
+            "type": "image/png"
+        },
+        {
+            "src": "/images/android-chrome-512x512.png?v=1a",
+            "sizes": "512x512",
             "type": "image/png"
         }
     ],

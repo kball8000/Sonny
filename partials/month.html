@@ -51,35 +51,26 @@
 
     <!--    Spinner  -->
     <div layout="row" layout-sm="column" layout-align="space-around">
-      <md-progress-circular ng-show='!o.info.month.weather.cal'
+      <md-progress-circular ng-show='!o.info.month.weather.html'
                             md-mode="indeterminate">
       </md-progress-circular>
     </div>
         
     <!--    Calendar  -->
-    <table class='table'>
+    <!-- <table class='table'>
         <tr>
             <th ng-repeat="h in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']">{{h}}</th>
         </tr>
         <tr ng-repeat='week in o.info.month.weather.cal'>
-            <td ng-repeat='day in week' 
-                ng-class='{noncurrent: day.date[1] !== o.info.month.month}'>
+            <td ng-repeat='day in week'>
               <div>
-                <!-- {{day.high|dayweather}} -->
-                <!-- {{day.high|nf}} -->
-                <!-- <span ng-bind-html="day.displayText"></span> -->
                 <span ng-bind-html="day.html"></span>
-                <!-- {{day.date[2]}}<br>
-                <span ng-show="day.high">H {{day.high}}&deg;<br></span>
-                <span ng-show="day.low">L {{day.low}}&deg;<br></span>
-                <span ng-show="day.rain > 0">Rain </span>
-                <span ng-show="day.precip > 0">{{day.precip}}"<br></span>
-                <span ng-show="day.snow > 0">Snow </span>
-                <span ng-show="day.snowfall > 0">{{day.snowfall}}"<br></span> -->
               </div>
             </td>
         </tr>
     </table>
+    <hr> -->
+    <div ng-bind-html="o.info.month.weather.html"></div>
 
   <!--    Totals  -->
   <md-card>

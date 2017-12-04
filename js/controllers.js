@@ -39,7 +39,22 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       r.value.radar.imgUrl = URL.createObjectURL(r.value.radar.img);
     } catch (e) {
       console.log('no radar image to create a URL.');
+      // angular.noop();
     }
+  }
+  function clearSpinners() {
+    /**
+     * In case current/hourly... were stored in db with spinner set to true, reset them here.
+     * This can cause grief because spinner is only activated / turned off when it has been a long
+     * time between weather update checks to server. If db accidentally stores spinner info, app
+     * spins forever on next load.
+     */
+    let arr = ['current', 'hourly', 'tenday'];
+    for (let el of arr) {
+      wData.info[el].spinner    = false;
+      wData.info[el].spinnerId  = 0;
+    }
+    console.log('current: ', wData.info.current);
   }
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
@@ -52,6 +67,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       if(r && r.value) {
         setImgUrl();
         wData.info = r.value;
+        clearSpinners();
       } else {
         wData.info = new wData.createWeatherObj(city);
       }
@@ -101,9 +117,9 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     let dlAnchorElem = document.createElement('a');
     dlAnchorElem.setAttribute("href",     dataStr     );
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
-    dlAnchorElem.click();      
+    dlAnchorElem.click();
   }
-  $scope.addErrors = () => {
+  $scope.addErrors = () => {   // TESTING
     wData.info.current.expiredMsg = 'currentExpired';
     wData.info.hourly.expiredMsg = 'hourlyExpired';
     wData.info.tenday.expiredMsg = 'tendayExpired';
@@ -111,13 +127,34 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     wData.info.hourly.errorMsg = 'hourlyError';
     wData.info.tenday.errorMsg = 'tendayError';
   }
-  $scope.clearErrors = () => {
+  $scope.clearErrors = () => {   // TESTING
     wData.info.current.expiredMsg = '';
     wData.info.hourly.expiredMsg = '';
     wData.info.tenday.expiredMsg = '';
     wData.info.current.errorMsg = '';
     wData.info.hourly.errorMsg = '';
     wData.info.tenday.errorMsg = '';
+  }
+  $scope.editMonths = () => {   // TESTING
+    let url = window.location.origin + '/modifycal';
+    console.log('url: ', url);
+    $http.post(url).then(r => {
+      console.log('editmonths response: ', r);
+    })
+  }
+  $scope.hi = () => {   // TESTING
+    let url = window.location.origin + '/hi';
+    console.log('running url: ', url);
+    $http.get(url).then(r => {
+      console.log('hi response: ', r);
+    })
+  }
+  $scope.getMonthObj = () => {   // TESTING
+    let url = window.location.origin + '/getmonthobj';
+    console.log('running url: ', url);
+    $http.post(url).then(r => {
+      console.log(url + ' response: ', r);
+    })
   }
   function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
     navigator.geolocation.getCurrentPosition(function(position) {

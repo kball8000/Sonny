@@ -47,3 +47,15 @@ handlers:
 libraries:
 - name: webapp2
   version: "2.5.1"
+
+skip_files:
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+- js/lib/angular.min.js.map
+- js/lib/angular-animate.min.js.map
+- js/lib/angular-aria.min.js.map
+- js/lib/angular-route.min.js.map
+- js/lib/angular-sanitize.min.js.map

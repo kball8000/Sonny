@@ -24,7 +24,7 @@ import s_month
 
 # import random
 import time
-# import logging
+import logging
 
 
 # Classes for server objects and their methods    
@@ -53,6 +53,7 @@ def get_weather_underground_data(url, _json=True):
             }
         }
     try:
+        logging.info('fetching  from wu: %s' %url)
         response = urlfetch.fetch(url)
 
         if response.status_code != 200:
@@ -60,6 +61,7 @@ def get_weather_underground_data(url, _json=True):
         elif _json:
             result = json.loads(response.content)
         else:
+            logging.info('completed from wu: %s' %url)
             result = response.content
     except:
         result = error_obj()
@@ -78,6 +80,7 @@ def trim_month(d):
     # sample date string: Last Updated on June 27, 5:27 PM PDT
     li = d.split(' ')
     li[3] = li[3][:3]
+    li[0] = li[0].lower()   # lowercase the word 'Last'
     return ' '.join(li)
 
 def process_current(raw):
@@ -299,16 +302,26 @@ class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        t0 = time.time()                                    # TESTING
-        info    = json.loads(self.request.body) # weather obj from page
+        def remove_cal_prop(month):
+            response = {}
+            for k, v in month.info.items():
+                if k != 'cal':
+                    response[k] = v
+            return response
 
-        # month   = s_month.get_month(info)                 # comment is TESTING
-        month, count   = s_month.get_month(info)            # TESTING
-        month.info['request_duration']  = round((time.time() - t0), 2)  # TESTING
-        month.info['count']             = count             # TESTING
+
+        t0 = time.time()                                    # TESTING
+        info    = json.loads(self.request.body)     # weather obj from page
+
+        month   = s_month.get_month(info)
+        # logging.info(': %s' %)
+        response = remove_cal_prop(month)
+
+        logging.info('month request_duration: %s' %round((time.time() - t0), 2))
 
         self.response.headers['Content-Type'] = 'text/javascript'
-        self.response.write(json.dumps(month.info))
+        # self.response.write(json.dumps(month.info))
+        self.response.write(json.dumps(response))
 
 class AddToQueue(webapp2.RequestHandler):
     def post(self):
@@ -322,6 +335,44 @@ class AddToQueue(webapp2.RequestHandler):
         
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps({'task': 'succeeded adding task'}))
+class ModifyCal(webapp2.RequestHandler):
+    def post(self):
+        logging.info('HI')
+        li = models.Forecast.query().fetch(1000)
+
+        logging.info('first forecast object: %s' %li[0].info['id'][:5])
+
+        for x in li:
+            if x.info['id'][:5] == 'month':
+                logging.info('will modify obj: %s' %x.info['id'])
+                if 'cal' in x.info['weather']:
+                    x.info['cal'] = x.info['weather']['cal']
+                    del x.info['weather']['cal']
+            else:
+                logging.info('will NOT modify : %s' %x.info['id'])
+        
+        self.response.headers['Content-Type'] = 'text/javascript'
+        self.response.write(json.dumps({'msg': 'succeeded cleaning up tasks'}))
+
+class GetMonthObj(webapp2.RequestHandler):
+    def post(self):
+        logging.info('Getting Month Obj...')
+        obj = models.Forecast.get({
+            'zip':      '61601',
+            'view':     'month',
+            'year':     2017,
+            'month':    11
+        })
+        
+        self.response.headers['Content-Type'] = 'text/javascript'
+        if obj:
+            self.response.write(json.dumps(obj.info))
+        else:
+            self.response.write(json.dumps({'msg':'nothing retrieved from datastore'}))
+
+
+# NOTE when testing functions. Get requests get intercepted by web app, so they only run once.
+# Easiest fix is to run Post requests
 
 app = webapp2.WSGIApplication([
     ('/', Basic),
@@ -333,9 +384,12 @@ app = webapp2.WSGIApplication([
     ('/radar', Basic),    
     ('/getweather', GetWeather),
     ('/getradar', GetRadar),
+    ('/modifycal', ModifyCal),
     
     # TESTING
     ('/addtoqueue', AddToQueue),
+    ('/getmonthobj', GetMonthObj),
+    # ('/modifycal', ModifyCal),
     
     # At end of list so I do not need to worry about EOL comma
     ('/getmonth', GetMonth)
