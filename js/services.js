@@ -632,7 +632,7 @@ var app = angular.module('weatherServices', [])
     let url = 'https://api.wunderground.com/api/85e2c1e705673981/geolookup/q/';
     url = url + lat + ',' + long + '.json';
     
-    console.log('will ping wu with latitude longitude information.');
+    // console.log('will ping wu with latitude longitude information.');
     $http.get(url).then(r => {
       console.log('zip back from WU GET Request ', r.data.location.zip );
     })
@@ -780,7 +780,7 @@ var app = angular.module('weatherServices', [])
     if(expiredData){
       // Stops spinner from going all the time on a bad network connection / slow device.      
       if (!recentCheck) {
-        console.log('starting spinner for ', view);
+        // console.log('starting spinner for ', view);
         spinnerId = wData.setSpinner(view, true);
       }
 

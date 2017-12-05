@@ -309,13 +309,10 @@ class GetMonth(webapp2.RequestHandler):
                     response[k] = v
             return response
 
-
         t0 = time.time()                                    # TESTING
-        info    = json.loads(self.request.body)     # weather obj from page
-
-        month   = s_month.get_month(info)
-        # logging.info(': %s' %)
-        response = remove_cal_prop(month)
+        info        = json.loads(self.request.body)     # weather obj from page
+        month       = s_month.get_month(info)
+        response    = remove_cal_prop(month)
 
         logging.info('month request_duration: %s' %round((time.time() - t0), 2))
 
@@ -337,22 +334,41 @@ class AddToQueue(webapp2.RequestHandler):
         self.response.write(json.dumps({'task': 'succeeded adding task'}))
 class ModifyCal(webapp2.RequestHandler):
     def post(self):
-        logging.info('HI')
+        # logging.info('HI')
         li = models.Forecast.query().fetch(1000)
+        li_r = []
 
-        logging.info('first forecast object: %s' %li[0].info['id'][:5])
+        # logging.info('first forecast object: %s' %li[0].info['id'][:5])
 
         for x in li:
+            o = {'id': x.info['id']}
             if x.info['id'][:5] == 'month':
-                logging.info('will modify obj: %s' %x.info['id'])
+                # logging.info('will modify obj: %s' %x.info['id'])
+                # o['mod'] = True
                 if 'cal' in x.info['weather']:
+                    o['ifCal'] = True
                     x.info['cal'] = x.info['weather']['cal']
                     del x.info['weather']['cal']
-            else:
-                logging.info('will NOT modify : %s' %x.info['id'])
-        
+                    models.Forecast.put(x)
+                # else:
+                    # o['ifCal'] = False
+
+                # if 'coolingdegreedays' in x.info['weather']:
+                #     o['cdd'] = True
+                #     x.info['test_prop'] = True
+
+                # if 'month' in x.info:
+                #     x.info['test_month'] = True
+
+                # models.Forecast.put(x)
+
+            # else:
+                # o['mod'] = False
+                # logging.info('will NOT modify : %s' %x.info['id'])
+            li_r.append(o)
+
         self.response.headers['Content-Type'] = 'text/javascript'
-        self.response.write(json.dumps({'msg': 'succeeded cleaning up tasks'}))
+        self.response.write(json.dumps({'response_list': li_r}))
 
 class GetMonthObj(webapp2.RequestHandler):
     def post(self):

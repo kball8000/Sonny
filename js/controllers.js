@@ -54,7 +54,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       wData.info[el].spinner    = false;
       wData.info[el].spinnerId  = 0;
     }
-    console.log('current: ', wData.info.current);
+    // console.log('current: ', wData.info.current);
   }
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
@@ -194,7 +194,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
        server can check for 5 char zip. 
     */
 
-    console.log('Running cityChg');
+    // console.log('Running cityChg');
     
     if(city && city.zip !== wData.info.zip){
       changeCity(city);
