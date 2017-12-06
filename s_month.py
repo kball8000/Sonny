@@ -92,8 +92,8 @@ def get_urls_to_update(month):
     i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
-    calls_reserved      = 9         # TESTING FOR SUPER LONG LOCAL DELAY.
-    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    # calls_reserved      = 9         # TESTING FOR SUPER LONG LOCAL DELAY.
+    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
