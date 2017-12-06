@@ -739,13 +739,13 @@ var app = angular.module('weatherServices', [])
     var obj = wData.info[view];
 
     if(view === 'radar') {
-      console.log('HI, setting RADAR DATA FOR VIEW, newData: ', newData);
+      // console.log('HI, setting RADAR DATA FOR VIEW, newData: ', newData);
       wData.info.radar = newData;
-      console.log('Date.now(): ', Date.now());
-      console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
+      // console.log('Date.now(): ', Date.now());
+      // console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
       // wData.updateExpiredMsg('radar');
     } else if(view === 'month') {
-      console.log('updateviewdata, obj.weather > newdata: ', newData);
+      // console.log('updateviewdata, obj.weather > newdata: ', newData);
       obj.complete = newData.complete;
       obj.weather  = newData.weather;
 
@@ -834,16 +834,16 @@ var app = angular.module('weatherServices', [])
     }
 
     httpReq('month').then(r => {
-      console.log('httpReq(month).then(r =>', r);
+      // console.log('httpReq(month).then(r =>', r);
       var month = wData.info.month;
       try{
         if (month.id === r.data.id){
-          console.log('month ids are equal, month', month);
+          // console.log('month ids are equal, month', month);
           // Update Screen
           // Does update view convert month back to JS??? Seems to be working 11/26/17.
 
           updateViewData('month', r.data);
-          console.log('just ran updateViewData');
+          // console.log('just ran updateViewData');
 
           wData.info.month.lastSuccessfulCheck = Date.now();
 

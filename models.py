@@ -48,6 +48,28 @@ def get_id(info):
     
     return _id
 
+class LogObj(ndb.Model):
+    """Dataset for current, hourly and tenday objects"""
+    logs    = ndb.JsonProperty(compressed=True)
+    _obj    = None
+    
+    # STILL A WORK IN PROGRESS.
+
+    @classmethod
+    def w_get(self, info):
+        self._obj = self.get_by_id('logs', use_cache=False, use_memcache=False)
+
+        if not self._obj:
+            self._obj = self(id='logs')
+        else:
+            del self._obj.logs[:-500]
+
+        return self._obj
+
+    @classmethod
+    def w_put(self, obj):
+        return obj.put() if valid_data(obj) else None
+
 class Forecast(ndb.Model):
     """Dataset for current, hourly and tenday objects"""
     info    = ndb.JsonProperty(compressed=True)
@@ -72,7 +94,6 @@ class Forecast(ndb.Model):
     @classmethod
     def w_put_async(self, obj):
         return obj.put_async() if valid_data(obj) else None
-
 class Radar(ndb.Model):
     """Holds radar images. WU sends them for each zip / radius / screen size"""
     image   = ndb.BlobProperty()

@@ -12,6 +12,9 @@ import s_utils
 #import time
 import logging
 
+LOG_OBJ = {}
+W_OBJ   = {}    # shared data
+
 def process_day(day, data):
     day['high']                 = data['maxtempi']
     day['low']                  = data['mintempi']
@@ -42,7 +45,13 @@ def process_day(day, data):
     d   = day['date']
     req = datetime(d[0], d[1], d[2])
     
+    
     day['complete'] = now - req > timedelta(days=2)
+    # if now - req > timedelta(days=2):
+    #     day['complete'] = True
+    # else:
+    #     day['complete'] = False
+    #     day['last_updated'] = 0
     
     return day
 def create_month(info): 
@@ -83,8 +92,8 @@ def get_urls_to_update(month):
     i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
-    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    calls_reserved      = 9         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
@@ -142,8 +151,8 @@ def update_month(month, urls):
         urlfetch.make_fetch_call(rpc, url)
         rpcs.append(rpc)
 
-    if len(urls):
-        logging.info('Requests sent, now we wait...')
+    if len(urls):                                           # TESTING
+        logging.info('Requests sent, now we wait...')       # TESTING
 
     for rpc in rpcs:
         rpc.wait()
@@ -165,6 +174,9 @@ def update_month(month, urls):
                         r = result['history']['dailysummary'][0]
                         day = process_day(day, r)
                         results.remove(result)
+                        # logging.info('hi about to update month:')
+                        # logging.info('updated: %s' %month['updated'])
+                        month.info['updated'] = True
                     except:
                         logging.info('could not get weather')
             if not len(results):
@@ -228,14 +240,14 @@ def save_month(_month):
     # month_complete, month_updated = True, False
     # Assume these next 2 statements and verify in next steps.
     _month.info['complete'] = True
-    _month.info['updated']  = False
+    # _month.info['updated']  = False
     cal = _month.info['cal']
 
     # Determine if month is updated and/or complete.
     for week in cal:
         for day in week:
-            if day['updated'] and not _month.info['updated']:
-                _month.info['updated']  = True
+            # if day['updated'] and not _month.info['updated']:
+            #     _month.info['updated']  = True
             if not day['complete'] and _month.info['complete']:
                 _month.info['complete'] = False
             day['updated'] = False
@@ -273,7 +285,7 @@ def save_month(_month):
         _month.info['updated'] = False
         models.Forecast.put(_month)
 def build_html_table(_month):
-    HTML_VERSION = '0.1q'
+    HTML_VERSION = '0.1r'
     old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
 
     # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
@@ -324,7 +336,6 @@ def build_html_table(_month):
     return _month 
 def get_month(info):
     info['id'] = create_month_id(info['zip'], info['year'], info['month'])
-    # save, months = False, []
     months = []
 
     month = models.Forecast.get(info)
@@ -341,11 +352,10 @@ def get_month(info):
             m = build_html_table(m)
             save_month(m)
 
-
     if not len(months):
         m = build_html_table(month)
-        logging.info('updated: : %s' %m.info['updated'])
+        # logging.info('updated: : %s' %m.info['updated'])
         if m.info['updated']:
             save_month(m)
     
-    return month                                  # Comment is TESTING 
+    return month
