@@ -3,13 +3,13 @@ from datetime import datetime, timedelta
 import calendar
 import functools
 import json
+import time
 
 # custom modules
 import models
 import s_utils
 
 # debugging
-#import time
 import logging
 
 LOG_OBJ = {}
@@ -41,17 +41,25 @@ def process_day(day, data):
     
     # Only mark complete if not close to today. WU will report before day is over
     # and may not get actual high or total precip/snow.
-    now = datetime.utcnow()
-    d   = day['date']
-    req = datetime(d[0], d[1], d[2])
-    
-    
-    day['complete'] = now - req > timedelta(days=2)
-    # if now - req > timedelta(days=2):
-    #     day['complete'] = True
-    # else:
-    #     day['complete'] = False
-    #     day['last_updated'] = 0
+    now     = datetime.utcnow()
+    d       = day['date']
+
+    req     = datetime(d[0], d[1], d[2])
+
+    old     = now - req > timedelta(days=2)
+    recent  = now - req < timedelta(days=2) and now - req > timedelta(seconds=1)
+
+    day['complete']     = old
+    if recent:
+        day['last_updated'] = int(time.time())
+    else:
+        if 'last_updated' in day:
+            del day['last_updated']
+
+    # WORKING HERE...
+    # WORKING HERE...
+    # WORKING HERE...
+    # WORKING HERE...
     
     return day
 def create_month(info): 
@@ -87,13 +95,22 @@ def create_month(info):
 
 
     return models.Forecast.new_obj(info)
+def check_recent(day):
+    # logging.info('day: %s' %day)
+    if 'last_updated' in day:
+        now = int(time.time())
+        if now - day['last_updated'] < 3600:
+            return True
+    return False
+
 def get_urls_to_update(month): 
     """ There are 2 reasons to return dates, api usage restriction from weather underground, 
     i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
-    # calls_reserved      = 9         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    # Calls are reserved or left alone so there are still some available for a current or tenday request.
+    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
@@ -115,10 +132,12 @@ def get_urls_to_update(month):
     now = datetime.utcnow()
     for week in cal:
         for day in week:
-            d       = day['date']
-            req     = datetime(d[0], d[1], d[2])
-            history = req < now
-            if avail and not day['complete'] and history:
+            d                   = day['date']
+            req                 = datetime(d[0], d[1], d[2])
+            history             = req < now         # To avoid asking WU for weather data on a future date.
+            recently_checked    = check_recent(day)
+            logging.info('recently_checked: %s' %recently_checked)
+            if avail and not day['complete'] and history and not recently_checked:
                 urls.append(s_utils.create_url('month', _zip, day['date']))
                 avail -= 1
             elif not avail or not history:
@@ -158,6 +177,9 @@ def update_month(month, urls):
         rpc.wait()
     
     logging.info('Requests from WU COMPLETE\n\n')
+
+    # RIGHT HERE CREATE THE MONTH DICTIONARY SO NOT CYCLING THRU SO MANY TIMES.
+    # SEE IF THERE IS ANY OTHER PLACE IT MAY COME IN HANDY AND MOVE IT ACCORDINGLY.
 
     for week in cal:
         for day in week:

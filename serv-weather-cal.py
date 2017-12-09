@@ -377,7 +377,7 @@ class GetMonthObj(webapp2.RequestHandler):
             'zip':      '61601',
             'view':     'month',
             'year':     2017,
-            'month':    11
+            'month':    12
         })
         
         self.response.headers['Content-Type'] = 'text/javascript'
