@@ -99,7 +99,7 @@ def check_recent(day):
     # logging.info('day: %s' %day)
     if 'last_updated' in day:
         now = int(time.time())
-        if now - day['last_updated'] < 3600:
+        if now - day['last_updated'] < 5*60*60:
             return True
     return False
 
