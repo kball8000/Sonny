@@ -1,11 +1,23 @@
 <div ng-controller='monthCtrl'>
-  <span ng-if='o.info.month.message'> {{o.info.month.message}} </span>
+  <!-- DEPRECATED MONTH.MESSAGE AT 1.30. BRING BACK IF NEEDED LATER -->
+  <!-- <span ng-if='o.info.month.message'> {{o.info.month.message}} </span> -->
+  <ul ng-hide='true'>
+    <!-- <li>userYear:   {{o.info.monthUser.year}}</li>
+    <li>userMonth:  {{o.info.monthUser.month}}</li>
+    <li>future:     {{o.info.monthUser.future}}</li>
+    <li>monthUser:  {{o.info.monthUser}}</li> -->
+    <li>userYear:   {{o.monthUser.year}}</li>
+    <li>userMonth:  {{o.monthUser.month}}</li>
+    <li>future:     {{o.monthUser.future}}</li>
+    <li>monthUser:  {{o.monthUser}}</li>
+    <li>monthId:    {{o.info.month.id}}</li>
+  </ul>
   <md-card>
     <md-card-content id='monthInputContent'>
         <div layout="row" id='monthInputCard'>
     
         <!--    Date inputs  -->
-        <md-input-container>
+        <!-- <md-input-container>
           <label>Year</label>
           <md-select ng-model="o.info.month.year" 
                      ng-change="newMonth()">
@@ -15,9 +27,21 @@
               {{year}}
             </md-option>
           </md-select>
-        </md-input-container>
-        
+        </md-input-container> -->
         <md-input-container>
+          <label>Year</label>
+          <!-- <md-select ng-model="o.info.monthUser.year"  -->
+          <md-select ng-model="o.monthUser.year" 
+                      ng-change="newMonth()">
+            <md-option ng-repeat="year in years" 
+                        ng-value="year"
+                        ng-disabled="$index === years.indexOf(o.monthUser.year)">
+              {{year}}
+            </md-option>
+          </md-select>
+        </md-input-container>
+          
+        <!-- <md-input-container>
           <label>Month</label>
           <md-select ng-model="o.info.month.monthText"
                      ng-change="newMonth()">
@@ -27,8 +51,19 @@
               {{_month}}
             </md-option>
           </md-select>
+        </md-input-container> -->
+        <md-input-container>
+          <label>Month</label>
+          <md-select ng-model="o.monthUser.monthText"
+                      ng-change="newMonth()">
+            <md-option ng-repeat="_month in months" 
+                        ng-value="_month"
+                        ng-disabled="$index === months.indexOf(o.monthUser.monthText)">
+              {{_month}}
+            </md-option>
+          </md-select>
         </md-input-container>
-          
+            
         <!--    Date navigation arrows  -->
         <md-button class='md-raised chgMonth'
                    ng-click='nextMonth(false)'>
@@ -49,12 +84,12 @@
     </md-card-content>
   </md-card>    
 
-    <!--    Spinner  -->
-    <div layout="row" layout-sm="column" layout-align="space-around">
-      <md-progress-circular ng-show='!o.info.month.weather.html'
-                            md-mode="indeterminate">
-      </md-progress-circular>
-    </div>
+  <!--    Spinner  -->
+  <div layout="row" layout-sm="column" layout-align="space-around">
+    <md-progress-circular ng-show='o.info.month.id !== o.monthUser.id()'
+                          md-mode="indeterminate">
+    </md-progress-circular>
+  </div>
         
     <!--    Calendar  -->
     <!-- <table class='table'>
@@ -70,8 +105,11 @@
         </tr>
     </table>
     <hr> -->
-    <div ng-bind-html="o.info.month.weather.html"></div>
 
+    <!-- <div ng-bind-html="o.info.month.weather.html"></div> -->
+
+    <div ng-bind-html="o.info.month.html" ng-hide='o.info.month.id !== o.monthUser.id()'></div>
+    
   <!--    Totals  -->
   <md-card>
       <md-card-content style='padding:0.5em 1em;'>

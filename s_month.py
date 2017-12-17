@@ -15,6 +15,31 @@ import logging
 LOG_OBJ = {}
 W_OBJ   = {}    # shared data
 
+def create_cal(yr, mon):
+    """Creates an array calendar, i.e. each row is a week, each week is an arry of 7 day data objects."""
+    m           = calendar.Calendar(6)
+    cal, week   = [], []
+    # yr, _mon    = info['year'], info['month']
+    first_week  = True
+            
+    for i, d in enumerate(m.itermonthdates(yr, mon)):
+        obj = {'date':      [d.year, d.month, d.day],
+               'complete':  False,
+               'updated':   False
+              }
+
+        if not i%7:
+            if not first_week:
+                cal.append(week)
+            else:
+                first_week = False
+            week = [obj]
+        else:
+            week.append(obj)
+    cal.append(week)
+
+    return cal
+    
 def process_day(day, data):
     day['high']                 = data['maxtempi']
     day['low']                  = data['mintempi']
@@ -63,29 +88,32 @@ def process_day(day, data):
     
     return day
 def create_month(info): 
-    m           = calendar.Calendar(6)
-    cal, week   = [], []
-    yr, _mon    = info['year'], info['month']
-    first_week  = True
+    # m           = calendar.Calendar(6)
+    # cal, week   = [], []
+    # yr, _mon    = info['year'], info['month']
+    # first_week  = True
             
-    for i, d in enumerate(m.itermonthdates(yr, _mon)):
-        obj = {'date':      [d.year, d.month, d.day],
-               'complete':  False,
-               'updated':   False
-              }
+    # for i, d in enumerate(m.itermonthdates(yr, _mon)):
+    #     obj = {'date':      [d.year, d.month, d.day],
+    #            'complete':  False,
+    #            'updated':   False
+    #           }
 
-        if not i%7:
-            if not first_week:
-                cal.append(week)
-            else:
-                first_week = False
-            week = [obj]
-        else:
-            week.append(obj)
-    cal.append(week)
+    #     if not i%7:
+    #         if not first_week:
+    #             cal.append(week)
+    #         else:
+    #             first_week = False
+    #         week = [obj]
+    #     else:
+    #         week.append(obj)
+    # cal.append(week)
     
-    info['cal']     = cal
-    info['weather'] = {
+    # info['cal']         = cal
+    info['cal']         = create_cal(info['year'], info['month'])
+    info['complete']    = False
+    info['updated']     = False
+    info['weather']     = {
         'totalrainfall':        0.0,
         'totalsnowfall':        0.0,
         'mean_temp':            0.0,
@@ -136,7 +164,7 @@ def get_urls_to_update(month):
             req                 = datetime(d[0], d[1], d[2])
             history             = req < now         # To avoid asking WU for weather data on a future date.
             recently_checked    = check_recent(day)
-            logging.info('recently_checked: %s' %recently_checked)
+            # logging.info('recently_checked: %s' %recently_checked)
             if avail and not day['complete'] and history and not recently_checked:
                 urls.append(s_utils.create_url('month', _zip, day['date']))
                 avail -= 1
@@ -292,12 +320,12 @@ def save_month(_month):
     for week in cal:
         for day in week:
             if current_month == day['date'][1] and day['complete']:
+                w['mean_temp']          += float(day['mean_temp'])
                 w['totalrainfall']      += float(day['precip'])
                 w['totalsnowfall']      += float(day['snowfall'])
                 w['heatingdegreedays']  += int(day['heatingdegreedays'])
                 w['coolingdegreedays']  += int(day['coolingdegreedays'])
-                w['mean_temp']          += float(day['mean_temp'])
-                num_days                 += 1
+                num_days                += 1
                     
     w['totalrainfall']  = round(w['totalrainfall'], 2)
     w['totalsnowfall']  = round(w['totalsnowfall'], 2)

@@ -14,14 +14,13 @@ from datetime import datetime, timedelta
 import json
 import webapp2
 
-# custom modules
+# CUSTOM MODULES
 import keys
 import models   # ndb.Model from app engine datastore
 import s_utils
 import s_month
 
-# debugging
-
+# DEBUGGING
 # import random
 import time
 import logging
@@ -302,22 +301,24 @@ class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        def remove_cal_prop(month):
-            response = {}
-            for k, v in month.info.items():
-                if k != 'cal':
-                    response[k] = v
-            return response
+        # def create_response(month):
+        #     response                = month.info['weather']
+        #     response['id']          = month.info['id']
+        #     response['complete']    = month.info['complete']
+
+        #     return response
 
         t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
-        month       = s_month.get_month(info)
-        response    = remove_cal_prop(month)
+        logging.info('info from client: %s' %info)
+        month                   = s_month.get_month(info)
+        response                = month.info['weather']
+        response['id']          = month.info['id']
+        response['complete']    = month.info['complete']
 
         logging.info('month request_duration: %s' %round((time.time() - t0), 2))
 
         self.response.headers['Content-Type'] = 'text/javascript'
-        # self.response.write(json.dumps(month.info))
         self.response.write(json.dumps(response))
 
 class AddToQueue(webapp2.RequestHandler):

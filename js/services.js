@@ -81,6 +81,13 @@ var app = angular.module('weatherServices', [])
     }
     return '';    
   }
+  this.isMoreRecent = function (d0, d1) {
+    /**
+     * Returns whether input array, d1 with min length 2, is greater than d1.
+     * Note date object will not return the desired result if only the year is input.
+     */
+    return new Date(...d0) > new Date(...d1);
+  }
 })
 .service('wUtils', function() {
   this.objProp = function(obj, prop, value) {
@@ -123,7 +130,8 @@ var app = angular.module('weatherServices', [])
    * i.e. current / hourly... data object contains all weather info per zip code.
    */ 
   
-  var data = {
+  let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  let data = {
     info: {
       current:    {},
       hourly:     {},
@@ -131,7 +139,8 @@ var app = angular.module('weatherServices', [])
       month:      {},
       radar:      {},
       radarUser:  {}
-    }
+    },
+    monthUser:  createMonthUser()
   };
   data.createWeatherObj = function(city) {
     this.view       = ''; // Current page or request, i.e. current, tenday
@@ -142,10 +151,11 @@ var app = angular.module('weatherServices', [])
     this.hourly     = data.createForecastObj();
     this.tenday     = data.createForecastObj();
     this.month      = data.createMonthObj(city.zip);
+    // this.monthUser  = data.createMonthUser(city.zip);
     this.radar      = data.createRadarObj(city.zip);
     this.radarUser  = data.createRadarUserObj(city.zip);
   }  
-  data.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  data.months = months;
   // See autocomplete service for explanation of setHome.
   data.setHome            = {flag: false, city: {}};
   data.createForecastObj  = function(dict) {
@@ -159,77 +169,93 @@ var app = angular.module('weatherServices', [])
     };
   }
   data.createMonthId      = function(zip, yr, mon) {
+
     // convert to  wu/python month format for id.
-    mon += 1;   
+    mon += 1;
     mon = (mon > 9) ? mon.toString() : '0' + mon.toString();
     yr  = yr.toString();
       
     return 'month-' + zip + '-' + yr + mon;
   }
-  data.createMonthObj     = function(zip, yr, mon) {
-    if (!yr){
-      let d = new Date();
-      yr  = d.getFullYear();
-      mon = d.getMonth();      
+  // data.createMonthObj     = function(zip, yr, mon) {
+  data.createMonthObj     = function() {
+      // if (!yr){
+    //   let d = new Date();
+    //   yr  = d.getFullYear();
+    //   mon = d.getMonth();      
+    // }
+
+    return {
+      year:       0,
+      month:      0,
+      monthText:  data.months[0],
+      complete:   false,
+      html:       '',
+      id:         ''
+      // weather:    {} // includes html calendar and monthly totals.
     }
+  }
+  // data.createMonthUser = function(zip) {
+  function createMonthUser() {
+    let d   = new Date(),
+      yr  = d.getFullYear(),
+      mon = d.getMonth();      
 
     return {
       year:       yr,
       month:      mon,
-      monthText:  data.months[mon], 
-      complete:   false,
-      id:         data.createMonthId(zip, yr, mon),
-      // timeout:    null,
-      weather:    {} // includes html calendar and monthly totals.
-    }
-  }
-  data.concatDayText      = function(m) {   // DEPRECATED, MOVING TO SERVER IN 1.28g.
-    // month
-    //  displayVersion
-    //  weather
-    //    cal
-    let VERSION = '0.1g';
-    console.log('running concatDayText', m);
-    if (!m.displayTextVersion || m.displayTextVersion !== VERSION ) {
-      if (m.weather && m.weather.cal) {
-        for(let week of m.weather.cal) {
-          for (let day of week) {
+      monthText:  months[mon],
+      // id:         data.createMonthId(zip, yr, mon),
+      prefetch:   false,
+      timeoutId:  null,
+      id:        function() {
+        // convert to  wu/python month format for id.
+        let zip = data.info.zip,
+            mon = this.month,
+            yr  = this.year;
 
-
-            // A COUPLE MORE IFS:
-            //  -IF COMPLETE SET, OTHERWISE, ONLY H AND L, NO VALUES.
-            //  -IF MONTH !== DAY[1], SET CLASS TO .noncurrent
-
-
-            day.displayText = "<span class='dayHeader'>" + day.date[2] + '</span>' + 
-            '<br>H ' + day.high + '&deg<br>L ' + day.low + '&deg';
-            if (day.rain == 1) {    // only double == is intentional since it is probably a string.
-              day.displayText = day.displayText + '<br>Rain ' + day.precip + '"';
-            }
-            if (day.snow == 1) {    // only double == is intentional since it is probably a string.
-              day.displayText = day.displayText + '<br>Snow ' + day.snowfall + '"';
-            }
-          }
-          console.log('updated day 1 of week: ', week[0]);
-        }
+        mon += 1;
+        mon = (mon > 9) ? mon.toString() : '0' + mon.toString();
+        yr  = yr.toString();
+          
+        return 'month-' + zip + '-' + yr + mon;
       }
     }
-  
-    console.log('setting displayTextVersion', VERSION);
-    m.displayTextVersion = VERSION;
+  }
+  // data.monthUser = data.createMonthUser();
+  data.incrementMonth     = function(next) {
+    // let m = data.info.monthUser;
+    let m = data.monthUser;
+    
+    if (next) {
+      if(m.month < 11) {
+        m.month++;
+      } else {
+        m.month = 0;
+        m.year++;
+      }
+    } else {
+      if(m.month > 0) {
+        m.month--;
+      } else {
+        m.month = 11;
+        m.year--;
+      }
+    }
 
-    return m;
+    m.monthText = data.months[m.month];
+    // m.future    = next;                   // for prefetching    
   }
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
         width   = screen.width,
         radius  = zoom.toString();
     return ['radar', zip, height, width, radius].join('-');
-  };
+  }
   data.updateRadarId      = function() {
     data.info.radarUser.id = data.createRadarId(data.info.zip, data.info.radarUser.zoom);
   }
-  data.createRadarObj = function(zip, zoom, id) {
+  data.createRadarObj     = function(zip, zoom, id) {
     zoom  = zoom  || 200;
     id    = id    || data.createRadarId(zip, zoom);
 
@@ -245,16 +271,12 @@ var app = angular.module('weatherServices', [])
       zoom:         zoom
     }
   }
-  data.createRadarUserObj     = function(zip) {
+  data.createRadarUserObj = function(zip) {
     /**
      * Created this property since there are many images per zipcode, unlike current / hourly...
      * This allows the user to adjust the requested zoom and the image will update when it can, but
      * the image has it's own fixed zoom.
      */
-
-    // STILL NEED TO FIGURE OUT WHAT I WANT TO DO WITH THE SPINNER. I ONLY WANT IT TO SHOW IF NO
-    // IMAGE EXITS ON THE SCREEN AT ALL, BUT NOT SURE I KNOW HOW TO DO THAT NOR IF IT SHOULD BE
-    // HERE OR IN THE MAIN RADAR OBJECT.
 
     let zoom = 200;
 
@@ -262,7 +284,7 @@ var app = angular.module('weatherServices', [])
       id:   data.createRadarId(zip, zoom),
       zoom: zoom
     }
-  };
+  }
   data.setZoom            = function(z) {
     // Left out limit checks since zoom button disables on limits.
     let radarUser  = data.info.radarUser;
@@ -296,7 +318,7 @@ var app = angular.module('weatherServices', [])
     } else {
       wUtils.objProp(data.info, view + '.lastChecked', d);
     }
-  };
+  }
   data.updateExpiredMsg = function(_view) {
     /**
      * Will update an individual view if requested, otherwise all views.
@@ -359,16 +381,7 @@ var app = angular.module('weatherServices', [])
 
     return newSpinnerId;
   }
-  data.setDurations       = function(duration, count) {   // TESTING
-    let timestamp = $filter('date')(new Date(), 'M/d/yy h:mm:ss a'),
-        str       = duration + 's for '+ count +' days from WU ' + timestamp;
-
-    data.requestDurations.unshift(str);
-    data.requestDurations.splice(10);
-  }
-
-  data.requestDurations   = [];   // TESTING
-  data.radarRequestTS     = {}    // TESTING NEW FEATURE
+  data.radarRequestTS     = {};
   data.setRadarTS         = function(id, ts) {
     // ts - timestamp, id - radar image id.
     if (ts) {   // unset 
@@ -388,21 +401,16 @@ var app = angular.module('weatherServices', [])
 })
 .service('wDB', function($q, $interval, wDates){
   const DB_NAME           = 'weatherDB';
-  const DB_VERSION        = 5;            // long long integer, so can be up to a very large integer.
-  const STORE_NAME        = 'weather0';
-  const DEPRECATED_STORES = ['weather']
-  // const WEATHER_DB_VERSION = '0.0.1'
-  // const STORE_NAME = 'weather'
-  // MAYBE JUST CREATE A NEW STORE NAME IF YOU CHANGE PARAMETERS BREAKING THE OLD DB.
-
-  // CREATE A LIST OF DEPRECATED STORE_NAMES AND CYCLE THRU THEM TO DELETE WHAT IS NEEDED.
-  // ONUPGRADENEEDED, USE e.target.result.objectStoreNames (.contains(latest_store_name) SINCE
-  // IT IS A DOMSTRINGLIST AND NOT AN ARRAY) TO 
-  // DETERMINE IF I NEED TO CREATE THE DATASTORE NAME.
-  // DEPRECATED LIST WILL BE REQUIRED IF I MAKE BREAKING CHANGE TO THE DATA STRUCTURE.
+  const DB_VERSION        = 6;            // long long integer, so can be up to a very large integer.
+  const STORE_NAME        = 'weather2';
+  const DEPRECATED_STORES = ['weather', 'weather1']
+  // If there are breaking changes in the data structure:
+  //   - rev DB_VERSION to next integer
+  //   - add current storename to DEPRECATED_STORES array
+  //   - create a new storename
 
   // ALSO CONSIDER indexedDB.deleteDatabase(databaseName) IF I JUST WANT TO TOTALLY START OVER, BUT 
-  // NEED TO FIGURE OUT HOW I WOULD KNOW TO DELETE.
+  // WOULD NEED TO FIGURE OUT HOW I WOULD KNOW TO DELETE.
   
   var db = {};
   var checks = {open: false, loaded: false};
@@ -639,32 +647,39 @@ var app = angular.module('weatherServices', [])
 
   }
 })
-.service('weather', function($http, $timeout, wData, wDates, wDB, wLog, wUtils, autocomp){
+.service('weather', function($http, $q, $timeout, wData, wDates, wDB, wLog, wUtils, autocomp){
   function httpReq(view){
-    let _url, config,
-        data = {
+    let url     = window.location.origin, 
+        config  = {},
+        data    = {
             view: view,
             zip: wData.info.zip
         };
     if (view === 'radar'){
-      data.id     = wData.info.radarUser.id;
-      data.height = screen.height;
-      data.width  = screen.width;
-      data.radius = wData.info.radarUser.zoom.toString();
-      _url        = '/getradar';
-      config      = {responseType: 'blob'};
+      data.id             = wData.info.radarUser.id;
+      data.height         = screen.height;
+      data.width          = screen.width;
+      data.radius         = wData.info.radarUser.zoom.toString();
+      url                 += '/getradar';
+      // _url                = '/getradar';
+      config.responseType = 'blob';
+      // config      = {responseType: 'blob'};
     } else if(view === 'month'){
       // id is set on server to verify it always matches.
-      data.year       = wData.info.month.year;
-      data.month      = wData.info.month.month + 1;  // convert to python / wu month, i.e. Jan=1
-      data.complete   = false;
-      _url            = '/getmonth';
+      data.year   = wData.monthUser.year;
+      data.month  = wData.monthUser.month + 1;  // convert to python / wu month, i.e. Jan=1
+      // data.year   = wData.info.monthUser.year;
+      // data.month  = wData.info.monthUser.month + 1;  // convert to python / wu month, i.e. Jan=1
+      // data.complete   = false;
+      url         += '/getmonth';
+      // _url            = '/getmonth';
     } else{
       data.id = wData.info.id;
-      _url    = '/getweather';
+      url     += '/getweather';
+      // _url    = '/getweather';
     }
     // TODO TESTING: MOVE URL = ...ORIGIN TO TOP AND DO A URL += IN THE IF'S
-    let url = window.location.origin + _url;
+    // let url = window.location.origin + _url;
     return $http.post(url, data, config); 
   }
   function createTempRadarObj(r, lastServReq) {
@@ -746,8 +761,10 @@ var app = angular.module('weatherServices', [])
       // wData.updateExpiredMsg('radar');
     } else if(view === 'month') {
       // console.log('updateviewdata, obj.weather > newdata: ', newData);
-      obj.complete = newData.complete;
-      obj.weather  = newData.weather;
+      // obj.complete = newData.complete;
+      // obj.weather  = newData.weather;
+      wData.info.month = newData;
+      wData.info.month.lastSuccessfulCheck = Date.now();
 
     } else {    // current / hourly / tenday
       if( 'error' in newData ) {
@@ -815,9 +832,11 @@ var app = angular.module('weatherServices', [])
       })
     }
   }
+  function prefetchMonth() {
+    console.log('will run prefetchmonth... Nothing implemented yet');
+    // wDB._get
+  }
   function refreshMonth() {
-
-    // ADD EXPIRED STUFF HERE TO AVOID FLASHING SCREEN ???
 
     function createNewMonth(data) {
       /* Create a month object for storing in the DB. Do this to avoid async problem with what is
@@ -834,19 +853,11 @@ var app = angular.module('weatherServices', [])
     }
 
     httpReq('month').then(r => {
-      // console.log('httpReq(month).then(r =>', r);
-      var month = wData.info.month;
       try{
-        if (month.id === r.data.id){
-          // console.log('month ids are equal, month', month);
-          // Update Screen
-          // Does update view convert month back to JS??? Seems to be working 11/26/17.
-
+        console.log('returned month data: ', r);
+        if (wData.monthUser.id() === r.data.id){
           updateViewData('month', r.data);
-          // console.log('just ran updateViewData');
-
           wData.info.month.lastSuccessfulCheck = Date.now();
-
           wDB._put(wData.info.id, wData.info);
         }
         // Save to DB
@@ -938,6 +949,8 @@ var app = angular.module('weatherServices', [])
 
       if(!month.complete || expired){
         refreshMonth();
+      } else {
+        prefetchMonth();
       }
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');
@@ -949,4 +962,26 @@ var app = angular.module('weatherServices', [])
 
     wDB.cleanupCache();
   }
+  this.newMonthFromDB   = function(zip, yr, mon) {
+    // USE THIS OR THE ONE ON THE CONTROLLER, UNDECIDED IN 1.30
+    /* if it exists, retrieves from indexedDB or creates a new month object to display */
+    // let _id       = wData.createMonthId(zip, yr, mon),
+    let _id      = wData.monthUser.id();
+        deferred  =  $q.defer();
+    
+    console.log('monthUser.id: ', _id);
+    // $timeout.cancel(wData.info.month.timeout); // Do not think I'm setting timeouts anymore.
+    wDB._get(_id).then(r => {
+      if ( r && r.value && r.value.id === _id ){
+        wData.info.month = r.value;
+        deferred.resolve();
+      } else {
+        deferred.reject('wDB get month id is not matching UI month id');
+      }
+      // wData.info.month = r && r.value ? r.value : wData.createMonthObj(zip, yr, mon);
+      // deferred.resolve();
+    })
+    return deferred.promise;
+  }
+  
 });

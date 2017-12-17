@@ -116,12 +116,12 @@ class Radar(ndb.Model):
     def w_put_async(self, obj):
         return obj.put_async() if valid_data(obj, 'radar') else None
 
-def log_dates(dates):
-    i = 5 if len(dates) > 4 else len(dates)
+# def log_dates(dates):
+#     i = 5 if len(dates) > 4 else len(dates)
 
-    for x in xrange(i):
-        logging.info('beginning 5 dates %s: %s' %(x+1, dates[x]))
-        logging.info('ending    5 dates %s: %s'   %(-(x+1), dates[-(x+1)]))
+#     for x in xrange(i):
+#         logging.info('beginning 5 dates %s: %s' %(x+1, dates[x]))
+#         logging.info('ending    5 dates %s: %s'   %(-(x+1), dates[-(x+1)]))
 
 class APILock(ndb.Model):
     """This limits API use so I do not go over weather underground quota and with enough overages, eventually lose API key.  When retreiving lock from datastore assume we will get to use a date, so add a placeholder to the list. If main program decides it is unavailable, remove the placeholder date. Lock is used for data consistency, since main program is multithreaded."""
@@ -153,8 +153,8 @@ class APILock(ndb.Model):
         with self._api_lock:
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
             for date in dates:
-                logging.info('removing date: %s' %date)
                 self._lock.dates.remove(date)
+            logging.info('removing number of dates: %s' %len(dates))
             logging.info('after removing dates, length: %s' %len(self._lock.dates))
             self._lock.put()
         return True

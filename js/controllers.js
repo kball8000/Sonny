@@ -119,35 +119,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();
   }
-  $scope.addErrors = () => {   // TESTING
-    wData.info.current.expiredMsg = 'currentExpired';
-    wData.info.hourly.expiredMsg = 'hourlyExpired';
-    wData.info.tenday.expiredMsg = 'tendayExpired';
-    wData.info.current.errorMsg = 'currentError';
-    wData.info.hourly.errorMsg = 'hourlyError';
-    wData.info.tenday.errorMsg = 'tendayError';
-  }
-  $scope.clearErrors = () => {   // TESTING
-    wData.info.current.expiredMsg = '';
-    wData.info.hourly.expiredMsg = '';
-    wData.info.tenday.expiredMsg = '';
-    wData.info.current.errorMsg = '';
-    wData.info.hourly.errorMsg = '';
-    wData.info.tenday.errorMsg = '';
-  }
-  $scope.editMonths = () => {   // TESTING
-    let url = window.location.origin + '/modifycal';
-    console.log('url: ', url);
-    $http.post(url).then(r => {
-      console.log('editmonths response: ', r);
-    })
-  }
-  $scope.hi = () => {   // TESTING
-    let url = window.location.origin + '/hi';
-    console.log('running url: ', url);
-    $http.get(url).then(r => {
-      console.log('hi response: ', r);
-    })
+  $scope.getMonthId = () => {   // TESTING
+    console.log('id: ', wData.monthUser.idd());
   }
   $scope.getMonthObj = () => {   // TESTING
     let url = window.location.origin + '/getmonthobj';
@@ -217,16 +190,17 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     weather.refreshForecasts();
   })
 })
-.controller('monthCtrl', function($scope, $http, $q, $timeout, wDB, wData, weather) {
+.controller('monthCtrl', function($scope, $http, $q, $timeout, wDB, wData, wDates, weather) {
   function newMonthFromDB(zip, yr, mon) {
+    // DEPRECATED 1.30, USE FUNCTION IN WEATHER SERVICE.
     /* if it exists, retrieves from indexedDB or creates a new month object to display */
-    var _id       = wData.createMonthId(zip, yr, mon), 
+    let _id       = wData.createMonthId(zip, yr, mon),
         deferred  =  $q.defer();
     
-    wData.info.month.id = _id;
+    // wData.info.month.id = _id;
     // $timeout.cancel(wData.info.month.timeout); // Do not think I'm setting timeouts anymore.
     wDB._get(_id).then(r => {
-      wData.info.month = r ? r.value : wData.createMonthObj(zip, yr, mon);
+      wData.info.month = r && r.value ? r.value : wData.createMonthObj(zip, yr, mon);
       deferred.resolve();
     })
     return deferred.promise;
@@ -235,39 +209,30 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     $scope.requestDisabled = false;
     $scope.requestText = 'Add to Server Queue';    
   }
-  
-  wDB.waitFor('loaded').then(r => {
-    $scope.o      = wData;                // For html page
-    $scope.months = wData.months;
+  function setMonthFetch(future) {
+    /**
+     * Month fetch is independant of the month displayed to user. Set values here
+     * for http request later. future is boolean, once month is complete begin
+     * prefetching either previous or next month.
+     * May be DEPRECATED at 1.30.
+     */
+    wData.info.monthFetch.year    = wData.info.month.year;
+    wData.info.monthFetch.month   = wData.info.month.month;
+    wData.info.monthFetch.zip     = wData.info.zip;
+    wData.info.monthFetch.future  = future;
+  }
+  function getYearsArr() {
+    let year  = new Date().getFullYear(),
+        years = [year];
 
-    var yr        = new Date().getFullYear();
-    $scope.years  = [yr];
-    while(yr > 1970){
-      $scope.years.push(--yr);
+    while(year > 1970){
+      years.push(--year);
     }
 
-    wData.concatDayText(wData.info.month);
-    resetRequestBtn();    
-    weather.refreshForecasts();
-  })
-    
-  $scope.newMonth = function(){
-    /* Month and year are modifiable by user using input pull downs */
-    var m       = wData.info.month,
-        zip     = wData.info.zip;
-
-    m.month = wData.months.indexOf(m.monthText);
-    resetRequestBtn();
-  
-    newMonthFromDB(zip, m.year, m.month).then(r => { 
-      weather.refreshForecasts(); 
-    })
+    return years;
   }
-  $scope.nextMonth = function(next) {
-    var m       = wData.info.month,
-        zip     = wData.info.zip;
-    
-    resetRequestBtn();
+  function updateMonthVal(next){
+    let m = wData.info.month;
 
     if(next) {
       if(m.month !== 11) {
@@ -284,15 +249,76 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
         m.year--;
       }
     }
-    m.monthText = wData.months[m.month];
-    newMonthFromDB(zip, m.year, m.month).then(r => { 
+
+    m.monthText = wData.months[m.month];    
+  }
+  
+  wDB.waitFor('loaded').then(r => {
+    $scope.o      = wData;                // For html page
+    $scope.months = wData.months;
+    $scope.years  = getYearsArr();
+
+    resetRequestBtn();
+    // setMonthFetch(false);
+    weather.refreshForecasts();
+  })
+    
+  $scope.newMonth = function(){
+    /* Month and year are modifiable by user using input pull downs */
+    // let m         = wData.info.monthUser,
+    let m         = wData.monthUser,
+        // zip       = wData.info.zip,
+        curMonth  = wData.info.month.month,
+        curYear   = wData.info.month.year,
+        newMonth  = wData.months.indexOf(m.monthText),  // From dropdown input in UI.
+        newYear   = m.year;                             // From dropdown input in UI.
+
+    // let cur = {
+    //   month:  wData.info.month.month,
+    //   year:   wData.info.month.year
+    // }, 
+    // user = {
+    //   month:  wData.months.indexOf(m.monthText),
+    //   year:   m.year
+    // };
+        
+    m.month   = newMonth;
+    // m.id      = wData.createMonthId(zip, newYear, newMonth);
+    // m.future  = newMonth > curMonth;  // Used by prefetching.
+    // future property is used by prefetching.
+    m.prefetch  = wDates.isMoreRecent([newYear, newMonth], [curYear, curMonth]);
+    // m.future  = wDates.isMoreRecent([user.year, user.month], [cur.year, cur.month]);  
+    resetRequestBtn();
+
+    // setMonthFetch(newMonth > curMonth);
+  
+    weather.newMonthFromDB().then(r => { 
       weather.refreshForecasts(); 
     })
+    // newMonthFromDB(zip, newYear, newMonth).then(r => { 
+    //   weather.refreshForecasts(); 
+    // })
+  }
+  $scope.nextMonth = function(next) {
+    // var m       = wData.info.monthUser,
+    //     zip     = wData.info.zip;
+    
+    resetRequestBtn();
+    wData.incrementMonth(next);
+    wData.monthUser.prefetch = next;
+    // m.monthText = wData.months.indexOf(m.month)
+    // setMonthFetch(next);
+    weather.newMonthFromDB().then(r => { 
+      weather.refreshForecasts(); 
+    })
+    // newMonthFromDB(zip, m.year, m.month).then(r => { 
+    //   weather.refreshForecasts(); 
+    // })
   }
   $scope.requestQueue = function() {
     $scope.requestDisabled = true;
     $scope.requestText = 'Request Sent';
-    var url = window.location.origin + '/addtoqueue',
+    let url = window.location.origin + '/addtoqueue',
         data = {
           zip:      wData.info.zip,
           year:     wData.info.month.year,
