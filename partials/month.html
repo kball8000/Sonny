@@ -1,8 +1,8 @@
 <div ng-controller='monthCtrl'>
   <!-- DEPRECATED MONTH.MESSAGE AT 1.30. BRING BACK IF NEEDED LATER -->
   <!-- <span ng-if='o.info.month.message'> {{o.info.month.message}} </span> -->
-  <ul ng-hide='true'>
-    <!-- <li>userYear:   {{o.info.monthUser.year}}</li>
+  <ul ng-hide='false'>
+      <!-- <li>userYear:   {{o.info.monthUser.year}}</li>
     <li>userMonth:  {{o.info.monthUser.month}}</li>
     <li>future:     {{o.info.monthUser.future}}</li>
     <li>monthUser:  {{o.info.monthUser}}</li> -->
@@ -17,20 +17,8 @@
         <div layout="row" id='monthInputCard'>
     
         <!--    Date inputs  -->
-        <!-- <md-input-container>
-          <label>Year</label>
-          <md-select ng-model="o.info.month.year" 
-                     ng-change="newMonth()">
-            <md-option ng-repeat="year in years" 
-                       ng-value="year"
-                       ng-disabled="$index === years.indexOf(o.info.month.year)">
-              {{year}}
-            </md-option>
-          </md-select>
-        </md-input-container> -->
         <md-input-container>
           <label>Year</label>
-          <!-- <md-select ng-model="o.info.monthUser.year"  -->
           <md-select ng-model="o.monthUser.year" 
                       ng-change="newMonth()">
             <md-option ng-repeat="year in years" 
@@ -41,17 +29,6 @@
           </md-select>
         </md-input-container>
           
-        <!-- <md-input-container>
-          <label>Month</label>
-          <md-select ng-model="o.info.month.monthText"
-                     ng-change="newMonth()">
-            <md-option ng-repeat="_month in months" 
-                       ng-value="_month"
-                       ng-disabled="$index === months.indexOf(o.info.month.monthText)">
-              {{_month}}
-            </md-option>
-          </md-select>
-        </md-input-container> -->
         <md-input-container>
           <label>Month</label>
           <md-select ng-model="o.monthUser.monthText"
@@ -91,24 +68,8 @@
     </md-progress-circular>
   </div>
         
-    <!--    Calendar  -->
-    <!-- <table class='table'>
-        <tr>
-            <th ng-repeat="h in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']">{{h}}</th>
-        </tr>
-        <tr ng-repeat='week in o.info.month.weather.cal'>
-            <td ng-repeat='day in week'>
-              <div>
-                <span ng-bind-html="day.html"></span>
-              </div>
-            </td>
-        </tr>
-    </table>
-    <hr> -->
-
-    <!-- <div ng-bind-html="o.info.month.weather.html"></div> -->
-
-    <div ng-bind-html="o.info.month.html" ng-hide='o.info.month.id !== o.monthUser.id()'></div>
+  <!--    Calendar  -->
+  <div ng-bind-html="o.info.month.html" ng-hide='o.info.month.id !== o.monthUser.id()'></div>
     
   <!--    Totals  -->
   <md-card>
@@ -122,24 +83,23 @@
         </md-button>
   
         <md-list id='monthTotals'>
-          <md-list-item ng-show='o.info.month.weather.totalrainfall'>
-            Total Rain: {{o.info.month.weather.totalrainfall | number:2}}"
+          <md-list-item ng-show='o.info.month.totalrainfall'>
+            Total Rain: {{o.info.month.totalrainfall | number:2}}"
           </md-list-item>
-          <md-list-item ng-show='o.info.month.weather.totalsnowfall'>
-            Total Snow: {{o.info.month.weather.totalsnowfall | number:2}}"
+          <md-list-item ng-show='o.info.month.totalsnowfall'>
+            Total Snow: {{o.info.month.totalsnowfall | number:2}}"
           </md-list-item>
-          <md-list-item ng-show='o.info.month.weather.heatingdegreedays'>
-            Heating deg days: {{o.info.month.weather.heatingdegreedays}}
+          <md-list-item ng-show='o.info.month.heatingdegreedays'>
+            Heating deg days: {{o.info.month.heatingdegreedays}}
           </md-list-item>
-          <md-list-item ng-show='o.info.month.weather.coolingdegreedays'>
-            Cooling deg days: {{o.info.month.weather.coolingdegreedays}}
+          <md-list-item ng-show='o.info.month.coolingdegreedays'>
+            Cooling deg days: {{o.info.month.coolingdegreedays}}
           </md-list-item>
-          <md-list-item ng-show='o.info.month.weather.mean_temp'>
-            Mean Temp: {{o.info.month.weather.mean_temp}}&deg;F
+          <md-list-item ng-show='o.info.month.mean_temp'>
+            Mean Temp: {{o.info.month.mean_temp}}&deg;F
           </md-list-item>
         </md-list>
       </md-card-content>
     </md-card>
-  
-  
+    
 </div>

@@ -36,7 +36,6 @@ def valid_data(data, view=None):
         is_valid = True
     
     return is_valid
-
 def get_id(info):
     """ Recreating the id, even though this is done in javascript (JS), it is not always identical. 
         JS only has weather, python stores current and tenday independently. """
@@ -115,13 +114,6 @@ class Radar(ndb.Model):
     @classmethod    
     def w_put_async(self, obj):
         return obj.put_async() if valid_data(obj, 'radar') else None
-
-# def log_dates(dates):
-#     i = 5 if len(dates) > 4 else len(dates)
-
-#     for x in xrange(i):
-#         logging.info('beginning 5 dates %s: %s' %(x+1, dates[x]))
-#         logging.info('ending    5 dates %s: %s'   %(-(x+1), dates[-(x+1)]))
 
 class APILock(ndb.Model):
     """This limits API use so I do not go over weather underground quota and with enough overages, eventually lose API key.  When retreiving lock from datastore assume we will get to use a date, so add a placeholder to the list. If main program decides it is unavailable, remove the placeholder date. Lock is used for data consistency, since main program is multithreaded."""

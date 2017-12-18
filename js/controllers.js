@@ -191,35 +191,9 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   })
 })
 .controller('monthCtrl', function($scope, $http, $q, $timeout, wDB, wData, wDates, weather) {
-  function newMonthFromDB(zip, yr, mon) {
-    // DEPRECATED 1.30, USE FUNCTION IN WEATHER SERVICE.
-    /* if it exists, retrieves from indexedDB or creates a new month object to display */
-    let _id       = wData.createMonthId(zip, yr, mon),
-        deferred  =  $q.defer();
-    
-    // wData.info.month.id = _id;
-    // $timeout.cancel(wData.info.month.timeout); // Do not think I'm setting timeouts anymore.
-    wDB._get(_id).then(r => {
-      wData.info.month = r && r.value ? r.value : wData.createMonthObj(zip, yr, mon);
-      deferred.resolve();
-    })
-    return deferred.promise;
-  }
   function resetRequestBtn() {
     $scope.requestDisabled = false;
     $scope.requestText = 'Add to Server Queue';    
-  }
-  function setMonthFetch(future) {
-    /**
-     * Month fetch is independant of the month displayed to user. Set values here
-     * for http request later. future is boolean, once month is complete begin
-     * prefetching either previous or next month.
-     * May be DEPRECATED at 1.30.
-     */
-    wData.info.monthFetch.year    = wData.info.month.year;
-    wData.info.monthFetch.month   = wData.info.month.month;
-    wData.info.monthFetch.zip     = wData.info.zip;
-    wData.info.monthFetch.future  = future;
   }
   function getYearsArr() {
     let year  = new Date().getFullYear(),
@@ -231,27 +205,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
 
     return years;
   }
-  function updateMonthVal(next){
-    let m = wData.info.month;
-
-    if(next) {
-      if(m.month !== 11) {
-        m.month++;
-      } else {
-        m.month = 0;
-        m.year++;
-      }
-    } else {
-      if(m.month !== 0) {
-        m.month--;
-      } else {
-        m.month = 11;
-        m.year--;
-      }
-    }
-
-    m.monthText = wData.months[m.month];    
-  }
   
   wDB.waitFor('loaded').then(r => {
     $scope.o      = wData;                // For html page
@@ -259,61 +212,33 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     $scope.years  = getYearsArr();
 
     resetRequestBtn();
-    // setMonthFetch(false);
     weather.refreshForecasts();
   })
     
   $scope.newMonth = function(){
     /* Month and year are modifiable by user using input pull downs */
-    // let m         = wData.info.monthUser,
     let m         = wData.monthUser,
-        // zip       = wData.info.zip,
         curMonth  = wData.info.month.month,
         curYear   = wData.info.month.year,
         newMonth  = wData.months.indexOf(m.monthText),  // From dropdown input in UI.
         newYear   = m.year;                             // From dropdown input in UI.
-
-    // let cur = {
-    //   month:  wData.info.month.month,
-    //   year:   wData.info.month.year
-    // }, 
-    // user = {
-    //   month:  wData.months.indexOf(m.monthText),
-    //   year:   m.year
-    // };
         
-    m.month   = newMonth;
-    // m.id      = wData.createMonthId(zip, newYear, newMonth);
-    // m.future  = newMonth > curMonth;  // Used by prefetching.
-    // future property is used by prefetching.
+    m.month     = newMonth;
     m.prefetch  = wDates.isMoreRecent([newYear, newMonth], [curYear, curMonth]);
-    // m.future  = wDates.isMoreRecent([user.year, user.month], [cur.year, cur.month]);  
     resetRequestBtn();
-
-    // setMonthFetch(newMonth > curMonth);
   
     weather.newMonthFromDB().then(r => { 
       weather.refreshForecasts(); 
     })
-    // newMonthFromDB(zip, newYear, newMonth).then(r => { 
-    //   weather.refreshForecasts(); 
-    // })
   }
   $scope.nextMonth = function(next) {
-    // var m       = wData.info.monthUser,
-    //     zip     = wData.info.zip;
-    
     resetRequestBtn();
     wData.incrementMonth(next);
     wData.monthUser.prefetch = next;
-    // m.monthText = wData.months.indexOf(m.month)
-    // setMonthFetch(next);
+
     weather.newMonthFromDB().then(r => { 
       weather.refreshForecasts(); 
     })
-    // newMonthFromDB(zip, m.year, m.month).then(r => { 
-    //   weather.refreshForecasts(); 
-    // })
   }
   $scope.requestQueue = function() {
     $scope.requestDisabled = true;
@@ -321,9 +246,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     let url = window.location.origin + '/addtoqueue',
         data = {
           zip:      wData.info.zip,
-          year:     wData.info.month.year,
-          month:    wData.info.month.month + 1,
-          complete: false,
+          year:     wData.monthUser.year,
+          month:    wData.monthUser.month + 1,
           view:     'month'
         };
     $http.post(url, data);

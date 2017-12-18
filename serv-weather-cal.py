@@ -301,20 +301,14 @@ class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        # def create_response(month):
-        #     response                = month.info['weather']
-        #     response['id']          = month.info['id']
-        #     response['complete']    = month.info['complete']
-
-        #     return response
-
         t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
         logging.info('info from client: %s' %info)
         month                   = s_month.get_month(info)
-        response                = month.info['weather']
-        response['id']          = month.info['id']
-        response['complete']    = month.info['complete']
+        response                = month.info
+        if 'cal' in response and 'updated' in response:
+            del response['cal']
+            del response['updated']
 
         logging.info('month request_duration: %s' %round((time.time() - t0), 2))
 
@@ -378,7 +372,7 @@ class GetMonthObj(webapp2.RequestHandler):
             'zip':      '61601',
             'view':     'month',
             'year':     2017,
-            'month':    12
+            'month':    9
         })
         
         self.response.headers['Content-Type'] = 'text/javascript'
