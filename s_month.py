@@ -109,7 +109,7 @@ def process_day(day, data):
 def create_month(info): 
     info['cal']                 = create_cal(info['year'], info['month'])
     info['complete']            = False
-    info['updated']             = False
+    info['updated']             = True
 
     return models.Forecast.new_obj(info)
 def is_month_complete(month):
@@ -132,7 +132,7 @@ def clear_day_updates(month):
 def get_totals(month):
     w               = month.info
     # REPLACE THIS WITH MONTH.INFO['MONTH']
-    logging.info('current month val, to replace getting from id: %s' %month.info['month'])
+    # logging.info('current month val, to replace getting from id: %s' %month.info['month'])
     # current_month   = int(_month.info['id'][-2:])
     current_month   = int(month.info['month'])
     num_days        = 0.0
@@ -170,8 +170,8 @@ def get_urls_to_update(month):
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
     # Calls are reserved or left alone so there are still some available for a current or tenday request.
-    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
@@ -211,6 +211,25 @@ def get_urls_to_update(month):
         models.APILock.return_dates(return_dates)
         
     return urls
+def create_date_key(date):
+    return '-'.join([str(int(x)) for x in date])
+def create_cal_dict(cal):
+    o = {}
+    for week in cal:
+        for day in week:
+            key = '-'.join([str(x) for x in day['date']])
+            key1 = create_date_key(day['date'])
+            o[key] = day
+            # logging.info('will update day key:  %s' %key)
+            # logging.info('will update day key1: %s' %key1)
+
+            # o[day['date']] = day
+            # TODO USE SOMETHING LIKE THIS
+            # obj6 = '-'.join([str(x) for x in li6])
+
+            # This did not work because keys need to be immutable and arrays are not.
+            # o[day['date'][2]] = day
+    return o
 def update_month(month, urls):
     rpcs, results   = [], []
     cal             = month.info['cal']
@@ -237,39 +256,60 @@ def update_month(month, urls):
     for rpc in rpcs:
         rpc.wait()
     
-    logging.info('Requests from WU COMPLETE\n\n')
+    # logging.info('Requests from WU COMPLETE\n\n')
+    logging.info('Requests from WU COMPLETE')
 
     # RIGHT HERE CREATE THE MONTH DICTIONARY SO NOT CYCLING THRU SO MANY TIMES.
     # SEE IF THERE IS ANY OTHER PLACE IT MAY COME IN HANDY AND MOVE IT ACCORDINGLY.
 
     # SHOULD MOVE EVERYTHING BELOW AND CAL, OLD_VERSION VARS TO A PROCESS MONTH FUNCTION.
 
-    for week in cal:
-        for day in week:
-            for result in results:
-                try:
-                    d = result['history']['date']
-                    date = [int(d['year']), int(d['mon']), int(d['mday'])]
-                except:
-                    logging.info('Failed to update day with data from WU.')
-                    date = None
-                if date == day['date']:
-                    logging.info('Going to load history on date for date: %s' %date)
-                    try:
-                        r = result['history']['dailysummary'][0]
-                        # day         = process_day(day, r)
-                        # day['html'] = create_day_html(day, old_version)
-                        process_day(day, r)
-                        mark_complete_or_recent(day)
-                        day['updated'] = True
-                        month.info['updated'] = True
+    i = 0
+    t0 = time.time()
 
-                        results.remove(result)
+    i = len(results)
+    cal_dict = create_cal_dict(cal)
+    for result in results:
+        try:
+            r           = result['history']['dailysummary'][0]
+            d           = result['history']['date']
+            date        = [d['year'], d['mon'], d['mday']]
+        except:
+            logging.info('Failed to update day with data from WU.')
+        else:
+            date_key    = create_date_key(date)
+            day         = cal_dict[date_key]
+            process_day(day, r)
+            mark_complete_or_recent(day)
+            day['updated']          = True
+            month.info['updated']   = True
 
-                    except:
-                        logging.info('could not get weather')
-            if not len(results):
-                break
+    # for week in cal:
+    #     for day in week:
+    #         for result in results:
+    #             i += 1
+    #             try:
+    #                 d = result['history']['date']
+    #                 date = [int(d['year']), int(d['mon']), int(d['mday'])]
+    #             except:
+    #                 logging.info('Failed to update day with data from WU.')
+    #                 date = None
+    #             if date == day['date']:
+    #                 logging.info('Going to load history on date for date: %s' %date)
+    #                 try:
+    #                     r = result['history']['dailysummary'][0]
+    #                     process_day(day, r)
+    #                     mark_complete_or_recent(day)
+    #                     day['updated'] = True
+    #                     month.info['updated'] = True
+
+    #                     results.remove(result)
+
+    #                 except:
+    #                     logging.info('could not get weather')
+    #         if not len(results):
+    #             break
+    logging.info('cycling %s results took: %ss' %(i, round(time.time()-t0, 5)))
     
     return month
 def create_month_id(_zip, yr, mon):
@@ -336,8 +376,9 @@ def save_month(_month):
     # _month = get_totals(_month)
     get_totals(_month)
 
-    logging.info('savemonth, month %s %s is updated?: %s' %(_month.info['month'], _month.info['year'], _month.info['updated']))
+    
     if _month.info['updated']:
+        logging.info('savemonth, month %s %s is updated?: %s' %(_month.info['month'], _month.info['year'], _month.info['updated']))
         # _month = clear_day_updates(_month)
         clear_day_updates(_month)
         _month.info['updated'] = False
@@ -345,6 +386,8 @@ def save_month(_month):
 def build_html_table(_month):
     # HTML_VERSION = '0.1r'
     old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
+
+    t0 = time.time()
 
     # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
     if (old_version or _month.info['updated']):
@@ -379,6 +422,9 @@ def build_html_table(_month):
 
         _month.info['html']         = html
         _month.info['html_version'] = HTML_VERSION
+
+        t1 = round(time.time()-t0, 5)
+        logging.info('Updating html table for month %s took %ss, ' %(_month.info['month'], t1))
 
     # return _month 
 def get_month(info):
