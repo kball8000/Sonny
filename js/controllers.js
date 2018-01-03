@@ -59,7 +59,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
 
-    // cancelMonthTimeouts();   // Do not think I'm setting timeoutouts anymore.
+    console.log('running changecity:', );
 
     wData.info.zip = city.zip;
 
@@ -162,21 +162,17 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     }
   }
   $scope.cityChg = function(city) {
-    /* When editing text from 5 char to 4, itemChg fires again, but is undefined since it 
-       is not in the list, be sure not to send server request for 4 char zip code. Maybe 
-       server can check for 5 char zip. 
+    /**
+     * Runs when user selects city from pull down list.
     */
 
-    // console.log('Running cityChg');
-    
     if(city && city.zip !== wData.info.zip){
       changeCity(city);
-      
       autocomp.addCity(city);
-      $scope.searchText = '';
-      document.getElementById('acInputId').blur();
     }
-  }
+    $scope.searchText = '';
+    document.getElementById('acInputId').blur();
+}
 })
 .controller('currentCtrl', function($scope, wData, wDB, weather) {
   wDB.waitFor('loaded').then(r => {
@@ -192,8 +188,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
 })
 .controller('monthCtrl', function($scope, $http, $q, $timeout, wDB, wData, wDates, weather) {
   function resetRequestBtn() {
-    $scope.requestDisabled = false;
-    $scope.requestText = 'Add to Server Queue';    
+    $scope.requestDisabled  = false;
+    $scope.requestText      = 'Add to Server Queue';    
   }
   function getYearsArr() {
     let year  = new Date().getFullYear(),
@@ -214,31 +210,15 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     resetRequestBtn();
     weather.refreshForecasts();
   })
-    
   $scope.newMonth = function(){
-    /* Month and year are modifiable by user using input pull downs */
-    let m         = wData.monthUser,
-        curMonth  = wData.info.month.month,
-        curYear   = wData.info.month.year,
-        newMonth  = wData.months.indexOf(m.monthText),  // From dropdown input in UI.
-        newYear   = m.year;                             // From dropdown input in UI.
-        
-    m.month     = newMonth;
-    m.prefetch  = wDates.isMoreRecent([newYear, newMonth], [curYear, curMonth]);
+    wData.monthUser.month = wData.months.indexOf(wData.monthUser.monthText)
     resetRequestBtn();
-  
-    weather.newMonthFromDB().then(r => { 
-      weather.refreshForecasts(); 
-    })
+    weather.refreshForecasts();
   }
   $scope.nextMonth = function(next) {
     resetRequestBtn();
     wData.incrementMonth(next);
-    wData.monthUser.prefetch = next;
-
-    weather.newMonthFromDB().then(r => { 
-      weather.refreshForecasts(); 
-    })
+    weather.refreshForecasts();
   }
   $scope.requestQueue = function() {
     $scope.requestDisabled = true;

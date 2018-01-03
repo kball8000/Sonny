@@ -146,7 +146,7 @@ class APILock(ndb.Model):
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
             for date in dates:
                 self._lock.dates.remove(date)
-            logging.info('removing number of dates: %s' %len(dates))
-            logging.info('after removing dates, length: %s' %len(self._lock.dates))
+            # logging.info('removing number of dates: %s' %len(dates))
+            # logging.info('after removing dates, length: %s' %len(self._lock.dates))
             self._lock.put()
         return True

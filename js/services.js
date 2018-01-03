@@ -45,20 +45,20 @@ var app = angular.module('weatherServices', [])
     };
     return obj[view];
   }
-  this.recentCheck  = function(timestamp, view) {
+  this.recentCheck  = function (timestamp, view) {
     timestamp = timestamp || 0;
     // 2x stops spinner from running just because we at limit, but it has really been a while.
     let limit = 2*(getLimit(view));
         
     return Date.now() - timestamp < limit;
   }
-  this.isExpired    = function(timestamp, view) {
+  this.isExpired    = function (timestamp, view) {
     timestamp = timestamp || 0;
     let limit = getLimit(view);
 
     return Date.now() - timestamp > limit;
   }
-  this.convStr      = function(s) {
+  this.convStr      = function (s) {
     let d = [
       parseInt(s.substr(0, 4)),
       parseInt(s.substr(4, 2)) - 1,    // convert to JS month, i.e. Jan=0
@@ -71,7 +71,7 @@ var app = angular.module('weatherServices', [])
 
     return date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
   }
-  this.expiredWarning = function(timestamp, view) {
+  this.expiredWarning = function (timestamp, view) {
 
     if(this.isExpired(timestamp, view)){
       let format = 'MMM d, y h:mm a'
@@ -87,6 +87,45 @@ var app = angular.module('weatherServices', [])
      * Note date object will not return the desired result if only the year is input.
      */
     return new Date(...d0) > new Date(...d1);
+  }
+  this.incrementMonth = function (month, year, next) {
+    if (next) {
+      if(month < 11) {
+        month++;
+      } else {
+        month = 0;
+        year++;
+      }
+    } else {
+      if(month > 0) {
+        month--;
+      } else {
+        month = 11;
+        year--;
+      }
+    }
+    
+    return {month: month, year: year};
+  }
+  this.incrementMonth2 = function (obj, next) {
+    if (next) {
+      if(obj.month < 11) {
+        obj.month++;
+      } else {
+        obj.month = 0;
+        obj.year++;
+      }
+    } else {
+      if(obj.month > 0) {
+        obj.month--;
+      } else {
+        obj.month = 11;
+        obj.year--;
+      }
+    }
+  }
+  this.isHistory        = function (month, year) {
+    return new Date(year, month) < new Date();
   }
 })
 .service('wUtils', function() {
@@ -122,6 +161,15 @@ var app = angular.module('weatherServices', [])
     }
 
     return obj;
+  }
+  this.getIdFromList = function(id, arr) {
+    let response;
+    for(let x of arr) {
+      if (x.id === id) {
+        response = x;
+      }
+    }
+    return response;
   }
 })
 .service('wData', function($filter, $location, $timeout, wDates, wUtils) {
@@ -177,6 +225,19 @@ var app = angular.module('weatherServices', [])
       
     return 'month-' + zip + '-' + yr + mon;
   }
+  data.createMonthId2     = function(obj) {
+
+    // convert to  wu/python month format for id.
+    let month = obj.month,
+        year  = obj.year.toString(),
+        zip   = obj.zip || data.info.zip;
+
+    month += 1;
+    month = (month > 9) ? month.toString() : '0' + month.toString();
+
+    return 'month-' + zip + '-' + year + month;
+  }
+  
   // data.createMonthObj     = function(zip, yr, mon) {
   data.createMonthObj     = function() {
       // if (!yr){
@@ -224,27 +285,32 @@ var app = angular.module('weatherServices', [])
   }
   // data.monthUser = data.createMonthUser();
   data.incrementMonth     = function(next) {
-    // let m = data.info.monthUser;
-    let m = data.monthUser;
+    /**
+     * Increments month from UI arrow change
+     */
+    let m = data.monthUser,
+        r = wDates.incrementMonth(m.month, m.year, next);
     
-    if (next) {
-      if(m.month < 11) {
-        m.month++;
-      } else {
-        m.month = 0;
-        m.year++;
-      }
-    } else {
-      if(m.month > 0) {
-        m.month--;
-      } else {
-        m.month = 11;
-        m.year--;
-      }
-    }
+    // if (next) {
+    //   if(m.month < 11) {
+    //     m.month++;
+    //   } else {
+    //     m.month = 0;
+    //     m.year++;
+    //   }
+    // } else {
+    //   if(m.month > 0) {
+    //     m.month--;
+    //   } else {
+    //     m.month = 11;
+    //     m.year--;
+    //   }
+    // }
 
+    m.month     = r.month;
+    m.year      = r.year;
     m.monthText = data.months[m.month];
-    // m.future    = next;                   // for prefetching    
+    m.future    = next;                   // for prefetching    
   }
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
@@ -510,7 +576,35 @@ var app = angular.module('weatherServices', [])
         deferred.resolve(r.target.result);
       }
       request.onerror = function(e){
-        deferred.reject('could not retrieve entry from DB');
+        console.log('wDB._get error:', e);
+        deferred.reject(id);
+        // deferred.reject('could not retrieve entry from DB');
+      }
+    }
+    
+    this.waitFor('open').then(r => get_val())
+
+    return deferred.promise;
+  }
+  this._get2 = function(id) {
+    var deferred = $q.defer();
+    
+    function get_val(){
+      var request = db.transaction([STORE_NAME], 'readonly')
+      .objectStore(STORE_NAME)
+      .get(id);
+      
+      request.onsuccess = function(response){
+        let r = response.target.result;
+        if (r && r.value){
+          deferred.resolve(r.value);
+        } else {
+          deferred.resolve({undefinedId: id});
+        }
+      }
+      request.onerror = function(e){
+        console.log('wDB._get error:', e);
+        deferred.reject('could not retrieve', id, 'from DB');
       }
     }
     
@@ -648,6 +742,17 @@ var app = angular.module('weatherServices', [])
   }
 })
 .service('weather', function($http, $q, $timeout, wData, wDates, wDB, wLog, wUtils, autocomp){
+  function httpReqObj(obj){
+    /**
+     * For requesting data, at the moment only month data, which is outside of what is displayed 
+     * to the user, i.e. prefetching data.
+     */
+    let url = window.location.origin + '/getmonth';
+
+    obj.month += 1; // Convert for python, i.e. Jan = 1.
+
+    return $http.post(url, obj);
+  }
   function httpReq(view){
     let url     = window.location.origin, 
         config  = {},
@@ -673,6 +778,11 @@ var app = angular.module('weatherServices', [])
       // data.complete   = false;
       url         += '/getmonth';
       // _url            = '/getmonth';
+    } else if(view === 'monthPrefetch'){
+      data.year   = wData.monthUser.yearPrefetch;
+      data.month  = wData.monthUser.monthPrefetch + 1;  // convert to python / wu month, i.e. Jan=1
+      data.view   = 'month';
+      url         += '/getmonth';
     } else{
       data.id = wData.info.id;
       url     += '/getweather';
@@ -764,7 +874,7 @@ var app = angular.module('weatherServices', [])
       // obj.complete = newData.complete;
       // obj.weather  = newData.weather;
       wData.info.month = newData;
-      wData.info.month.lastSuccessfulCheck = Date.now();
+      // wData.info.month.lastSuccessfulCheck = Date.now();
 
     } else {    // current / hourly / tenday
       if( 'error' in newData ) {
@@ -832,45 +942,139 @@ var app = angular.module('weatherServices', [])
       })
     }
   }
-  function prefetchMonth() {
-    console.log('will run prefetchmonth... Nothing implemented yet');
-    // wDB._get
+  function createNewMonth(data) {
+    /* Create a month object for storing in the DB. Do this to avoid async problem with what is
+     in the main weather.month object vs the month of the returned data */
+
+     // DEPRECATED 1.30c
+
+    var zip       = data.zip,
+        yr        = data.year,
+        mon       = data.month - 1, // Convert to JS month, i.e. Jan=0.
+        newMonth  = wData.createMonthObj(zip, yr, mon);
+    
+    newMonth.id       = data.id;
+    newMonth.weather  = data.weather;
+
+    return newMonth;
   }
+
   function refreshMonth() {
-
-    function createNewMonth(data) {
-      /* Create a month object for storing in the DB. Do this to avoid async problem with what is
-       in the main weather.month object vs the month of the returned data */
-      var zip       = data.zip,
-          yr        = data.year,
-          mon       = data.month - 1, // Convert to JS month, i.e. Jan=0.
-          newMonth  = wData.createMonthObj(zip, yr, mon);
-      
-      newMonth.id       = data.id;
-      newMonth.weather  = data.weather;
-
-      return newMonth;
-    }
 
     httpReq('month').then(r => {
       try{
-        console.log('returned month data: ', r);
+        // console.log('returned month data: ', r);
         if (wData.monthUser.id() === r.data.id){
           updateViewData('month', r.data);
+          // wData.info.month.lastSuccessfulCheck = Date.now();
           wData.info.month.lastSuccessfulCheck = Date.now();
           wDB._put(wData.info.id, wData.info);
         }
         // Save to DB
-        let newMonth = createNewMonth(r.data);    // CONSIDER REPLACING WITH BELOW
-        wDB._put(newMonth.id, newMonth);          // CONSIDER REPLACING WITH BELOW
+        // let newMonth = createNewMonth(r.data);    // CONSIDER REPLACING WITH BELOW
+        // wDB._put(newMonth.id, newMonth);          // CONSIDER REPLACING WITH BELOW
         // wDB._put(wData.info.month.id, Object.assign({}, wData.info.month)); // TRY THIS INSTEAD OF ABOVE 2 LINES.
-      } catch (e) {
+        r.data.lastSuccessfulCheck = Date.now();
+        // wDB._put(r.data.id, r.data);
+        wDB._put(r.data.id, Object.assign({}, r.data));
+    } catch (e) {
         wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
         console.log('Failed to update Month with successful server req, error: ', e);
       }
     }, e => { 
       wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
       console.log('Failed to update Month with failed server request.');
+    })
+  }
+  function setMonthFromDB() {
+    /* if it exists, retrieves from indexedDB or creates a new month object to display */
+    // CONSIDER REMOVING THE DEFER AND JUST GO. I DO NOT USE THE REJECTED STATE.
+    // ALSO CONSIDER A TRY CATCH INSTEAD OF IF ( R && R.VALUE &&...)
+    // DEPRECATE IF UNUSED.
+    let id        = wData.monthUser.id(),
+        deferred  = $q.defer();
+    
+    wDB._get(id).then(r => {
+      if ( r && r.value && r.value.id === id ){
+        wData.info.month = r.value;
+        deferred.resolve('Successfully retrieved:', id);
+      } else {
+        deferred.reject('Failed to retrieve:', id);
+      }
+    })
+    return deferred.promise;
+  }  
+  function setMonthFromDB2() {
+    /* if it exists, retrieves from indexedDB or creates a new month object to display */
+    let id = wData.monthUser.id();
+    
+    wDB._get(id).then(r => {
+      if (r && r.value && r.value.id === id){
+        wData.info.month = r.value;
+      }
+    })
+  }  
+  function createArrMonths(seedMonth, offsets) {
+    /**
+     * Creates an array of months offset from the seed month.
+     */
+    let arr = [], newMonth, next;
+    for(let i of offsets) {
+      newMonth = {
+        month:  seedMonth.month,
+        year:   seedMonth.year,
+        view:   'month',
+        zip:    wData.info.zip
+      }
+      while (i !== 0) {
+        wDates.incrementMonth2(newMonth, (i > 0));
+        i = (i > 0) ? --i : ++i;
+      }
+      newMonth.id = wData.createMonthId2(newMonth);
+      arr.push(newMonth);
+    }
+    return arr;
+  }
+  function refreshMonth4() {
+    let arrInd = [0, -1, -2, 1],
+        arrMonths = createArrMonths(wData.monthUser, arrInd),
+        promises = [],
+        monthIdToUpdate, 
+        expired;
+
+    setMonthFromDB2();
+    for (let m of arrMonths) {
+      promises.push(wDB._get2(m.id));
+    }
+    Promise.all(promises).then( responses => {
+      console.log('promises response:', responses);
+      for (let r of responses) {
+        if (!monthIdToUpdate) {
+          expired = wDates.isExpired(r.lastSuccessfulCheck, 'month');
+          if (r.complete === false || expired) {
+            monthIdToUpdate = r.id;
+          } else if (r.undefinedId) {
+            monthIdToUpdate = r.undefinedId;
+          }
+        }
+      }
+      if (monthIdToUpdate) {
+        let month = wUtils.getIdFromList(monthIdToUpdate, arrMonths);
+        console.log('requesting month.id from server:', month.id);
+        httpReqObj(month).then(r => {
+          console.log('month response:', r);
+          r.data.lastSuccessfulCheck = Date.now();
+          if (r && r.data && r.data.id === month.id) {
+            console.log('requestedId:', month.id, '. Will put r in db:');
+            // console.log('requestedId:', month.id, '. Will put r in db:', r);
+            // wDB._put(r.id, r);
+          }
+          if (r && r.data && r.data.id === wData.monthUser.id()){
+            console.log('will dispaly month response, id:', r.data.id);
+            // wData.info.month = r;
+          }
+        })
+      }
     })
   }
   function refreshRadar() {
@@ -943,15 +1147,19 @@ var app = angular.module('weatherServices', [])
       $timeout(refreshView, 1000, true, 'tenday');
       
     } else if(view === 'month'){
-      /* Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. */
-      let month   = wData.info.month;
-      let expired = wDates.isExpired(month.lastSuccessfulCheck, 'month');
+      /**
+       * Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg.
+       * 
+       */ 
+      // let month   = wData.info.month;
+      // let expired = wDates.isExpired(month.lastSuccessfulCheck, 'month');
 
-      if(!month.complete || expired){
-        refreshMonth();
-      } else {
-        prefetchMonth();
-      }
+      // if(!month.complete || expired){
+      //   refreshMonth();
+      // }
+
+      refreshMonth4();
+
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');
     }
@@ -962,26 +1170,4 @@ var app = angular.module('weatherServices', [])
 
     wDB.cleanupCache();
   }
-  this.newMonthFromDB   = function(zip, yr, mon) {
-    // USE THIS OR THE ONE ON THE CONTROLLER, UNDECIDED IN 1.30
-    /* if it exists, retrieves from indexedDB or creates a new month object to display */
-    // let _id       = wData.createMonthId(zip, yr, mon),
-    let _id      = wData.monthUser.id();
-        deferred  =  $q.defer();
-    
-    console.log('monthUser.id: ', _id);
-    // $timeout.cancel(wData.info.month.timeout); // Do not think I'm setting timeouts anymore.
-    wDB._get(_id).then(r => {
-      if ( r && r.value && r.value.id === _id ){
-        wData.info.month = r.value;
-        deferred.resolve();
-      } else {
-        deferred.reject('wDB get month id is not matching UI month id');
-      }
-      // wData.info.month = r && r.value ? r.value : wData.createMonthObj(zip, yr, mon);
-      // deferred.resolve();
-    })
-    return deferred.promise;
-  }
-  
 });

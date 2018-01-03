@@ -52,7 +52,7 @@ def get_weather_underground_data(url, _json=True):
             }
         }
     try:
-        logging.info('fetching  from wu: %s' %url)
+        logging.info('get from wu: %s' %(url[:5] + '...' + url[50:]))
         response = urlfetch.fetch(url)
 
         if response.status_code != 200:
@@ -310,11 +310,10 @@ class GetMonth(webapp2.RequestHandler):
             del response['cal']
             del response['updated']
 
-        logging.info('month request_duration: %s' %round((time.time() - t0), 2))
+        logging.info('month request_duration: %s' %round((time.time() - t0), 3))
 
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(response))
-
 class AddToQueue(webapp2.RequestHandler):
     def post(self):
         for x in xrange(10):
