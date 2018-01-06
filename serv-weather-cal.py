@@ -310,7 +310,7 @@ class GetMonth(webapp2.RequestHandler):
             del response['cal']
             del response['updated']
 
-        logging.info('month request_duration: %s' %round((time.time() - t0), 3))
+        # logging.info('month request_duration: %s' %round((time.time() - t0), 3))
 
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(response))

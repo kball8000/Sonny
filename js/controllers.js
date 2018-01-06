@@ -59,8 +59,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
 
-    console.log('running changecity:', );
-
     wData.info.zip = city.zip;
 
     wDB._get(_id).then(r => {       // load local data.
@@ -147,13 +145,13 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       changeCity({zip: newZip, text: ''});
       
       $http.jsonp(url).then( r => {
-        let c           = r.data.RESULTS[0],
-            returnedZip = c.name.substr(0,5);
+        let c       = r.data.RESULTS[0],
+            newZip  = c.name.substr(0,5);
         
-        if (wData.info.zip === returnedZip) {
-          let city = c.name.substr(8);
-          wData.info.location = city;
-          autocomp.addCity({zip: query, text: city});
+        if (wData.info.zip === newZip) {
+          let newCityText     = c.name.substr(8);
+          wData.info.location = newCityText;
+          autocomp.addCity({zip: newZip, text: newCityText});
         }
       })
 
@@ -200,8 +198,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     }
 
     return years;
-  }
-  
+  }  
   wDB.waitFor('loaded').then(r => {
     $scope.o      = wData;                // For html page
     $scope.months = wData.months;

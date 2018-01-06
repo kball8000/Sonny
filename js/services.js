@@ -1035,46 +1035,87 @@ var app = angular.module('weatherServices', [])
     }
     return arr;
   }
+  function wDBMonthNeedsUpdating(month) {
+    let defer = $q.defer();
+    wDB._get(month.id).then(r => {
+      // console.log('getWDBMonth response:', r);
+      if (r && r.value) {
+        let expired = wDates.isExpired(r.value.lastSuccessfulCheck, 'month');
+        // console.log('id', r.id, 'expired:', expired, 'complete', r.value.complete);
+        if(r.value.complete === true && !expired) {
+          defer.resolve(false);
+        }
+      }
+      defer.resolve(month);
+    })
+    return defer.promise;
+  }
   function refreshMonth4() {
     let arrInd = [0, -1, -2, 1],
         arrMonths = createArrMonths(wData.monthUser, arrInd),
         promises = [],
-        monthIdToUpdate, 
+        monthIdToUpdate, // REMOVE ??
+        monthToUpdate, 
         expired;
 
     setMonthFromDB2();
     for (let m of arrMonths) {
-      promises.push(wDB._get2(m.id));
+      // console.log('m.id:', m.id);
+      // promises.push(wDB._get2(m.id));
+      promises.push(wDBMonthNeedsUpdating(m));
     }
     Promise.all(promises).then( responses => {
-      console.log('promises response:', responses);
+      // console.log('promises response:', responses);
       for (let r of responses) {
-        if (!monthIdToUpdate) {
-          expired = wDates.isExpired(r.lastSuccessfulCheck, 'month');
-          if (r.complete === false || expired) {
-            monthIdToUpdate = r.id;
-          } else if (r.undefinedId) {
-            monthIdToUpdate = r.undefinedId;
-          }
+        // console.log('r in for responses loop:', r);
+        if (!monthToUpdate) {
+          // console.log('setting month to update :', r);
+          monthToUpdate = r;  
         }
+      //   if (!monthIdToUpdate) {
+      //     expired = wDates.isExpired(r.lastSuccessfulCheck, 'month');
+      //     if (r.complete === false || expired) {
+      //       monthIdToUpdate = r.id;
+      //     } else if (r.undefinedId) {
+      //       monthIdToUpdate = r.undefinedId;
+      //     }
+      //   }
       }
-      if (monthIdToUpdate) {
-        let month = wUtils.getIdFromList(monthIdToUpdate, arrMonths);
-        console.log('requesting month.id from server:', month.id);
+      // if (monthIdToUpdate) {
+      //   let month = wUtils.getIdFromList(monthIdToUpdate, arrMonths);
+      //   console.log('requesting month.id from server:', month.id);
+      //   httpReqObj(month).then(r => {
+      //     console.log('month response:', r);
+      //     r.data.lastSuccessfulCheck = Date.now();
+      //     if (r && r.data && r.data.id === month.id) {
+      //       console.log('requestedId:', month.id, '. Will put r in db:');
+      //       // console.log('requestedId:', month.id, '. Will put r in db:', r);
+      //       // wDB._put(r.id, r);
+      //     }
+      //     if (r && r.data && r.data.id === wData.monthUser.id()){
+      //       console.log('will dispaly month response, id:', r.data.id);
+      //       // wData.info.month = r;
+      //     }
+      //   })
+      // }
+      if (monthToUpdate) {
+        let month = monthToUpdate;
+        // console.log('requesting month.id from server:', month.id);
         httpReqObj(month).then(r => {
-          console.log('month response:', r);
+          // console.log('month response:', r);
           r.data.lastSuccessfulCheck = Date.now();
           if (r && r.data && r.data.id === month.id) {
-            console.log('requestedId:', month.id, '. Will put r in db:');
+            // console.log('requestedId:', month.id, '. Will put r in db:');
             // console.log('requestedId:', month.id, '. Will put r in db:', r);
-            // wDB._put(r.id, r);
+            wDB._put(r.data.id, r.data);
           }
           if (r && r.data && r.data.id === wData.monthUser.id()){
             console.log('will dispaly month response, id:', r.data.id);
-            // wData.info.month = r;
+            wData.info.month = r.data;
           }
         })
       }
+      
     })
   }
   function refreshRadar() {

@@ -310,7 +310,7 @@ def update_month(month, urls):
     #                     logging.info('could not get weather')
     #         if not len(results):
     #             break
-    logging.info('cycling %s results took: %ss' %(i, round(time.time()-t0, 5)))
+    # logging.info('cycling %s results took: %ss' %(i, round(time.time()-t0, 5)))
     
     return month
 def create_month_id(_zip, yr, mon):
