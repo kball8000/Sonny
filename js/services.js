@@ -469,7 +469,7 @@ var app = angular.module('weatherServices', [])
   const DB_NAME           = 'weatherDB';
   const DB_VERSION        = 6;            // long long integer, so can be up to a very large integer.
   const STORE_NAME        = 'weather2';
-  const DEPRECATED_STORES = ['weather', 'weather1']
+  const DEPRECATED_STORES = ['weather', 'weather0', 'weather1']
   // If there are breaking changes in the data structure:
   //   - rev DB_VERSION to next integer
   //   - add current storename to DEPRECATED_STORES array
