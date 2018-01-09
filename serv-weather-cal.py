@@ -21,7 +21,6 @@ import s_utils
 import s_month
 
 # DEBUGGING
-# import random
 import time
 import logging
 
@@ -326,52 +325,14 @@ class AddToQueue(webapp2.RequestHandler):
         
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps({'task': 'succeeded adding task'}))
-class ModifyCal(webapp2.RequestHandler):
-    def post(self):
-        # logging.info('HI')
-        li = models.Forecast.query().fetch(1000)
-        li_r = []
-
-        # logging.info('first forecast object: %s' %li[0].info['id'][:5])
-
-        for x in li:
-            o = {'id': x.info['id']}
-            if x.info['id'][:5] == 'month':
-                # logging.info('will modify obj: %s' %x.info['id'])
-                # o['mod'] = True
-                if 'cal' in x.info['weather']:
-                    o['ifCal'] = True
-                    x.info['cal'] = x.info['weather']['cal']
-                    del x.info['weather']['cal']
-                    models.Forecast.put(x)
-                # else:
-                    # o['ifCal'] = False
-
-                # if 'coolingdegreedays' in x.info['weather']:
-                #     o['cdd'] = True
-                #     x.info['test_prop'] = True
-
-                # if 'month' in x.info:
-                #     x.info['test_month'] = True
-
-                # models.Forecast.put(x)
-
-            # else:
-                # o['mod'] = False
-                # logging.info('will NOT modify : %s' %x.info['id'])
-            li_r.append(o)
-
-        self.response.headers['Content-Type'] = 'text/javascript'
-        self.response.write(json.dumps({'response_list': li_r}))
-
 class GetMonthObj(webapp2.RequestHandler):
     def post(self):
         logging.info('Getting Month Obj...')
         obj = models.Forecast.get({
             'zip':      '61601',
             'view':     'month',
-            'year':     2017,
-            'month':    11
+            'year':     2018,
+            'month':    1
         })
         
         self.response.headers['Content-Type'] = 'text/javascript'
@@ -380,9 +341,8 @@ class GetMonthObj(webapp2.RequestHandler):
         else:
             self.response.write(json.dumps({'msg':'nothing retrieved from datastore'}))
 
-
 # NOTE when testing functions. Get requests get intercepted by web app, so they only run once.
-# Easiest fix is to run Post requests
+# Easiest fix is to run Post requests.
 
 app = webapp2.WSGIApplication([
     ('/', Basic),
@@ -394,7 +354,6 @@ app = webapp2.WSGIApplication([
     ('/radar', Basic),    
     ('/getweather', GetWeather),
     ('/getradar', GetRadar),
-    ('/modifycal', ModifyCal),
     
     # TESTING
     ('/addtoqueue', AddToQueue),

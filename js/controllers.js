@@ -95,8 +95,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       
       console.log('\n');
       for(let view of views) {
-        lc = new Date(wUtils.objProp(wData.info, view + '.lastChecked'));
-        lu = new Date(wUtils.objProp(wData.info, view + '.lastUpdated'));
+        // lc = new Date(wUtils.objProp(wData.info, view + '.lastChecked'));
+        // lu = new Date(wUtils.objProp(wData.info, view + '.lastUpdated'));
+        lc = new Date(wUtils.objProp(wData.info[view].lastChecked));
+        lu = new Date(wUtils.objProp(wData.info[view].lastUpdated));
         console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds());
         console.log(view, 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
       }

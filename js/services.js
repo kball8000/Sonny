@@ -29,8 +29,8 @@ var app = angular.module('weatherServices', [])
 })
 .service('wDates', function($filter){
   /**
-   * Dates are stored with UTC time. Beware javascript date function displaying a new 
-   * date in local time.
+   * Dates are stored with UTC time. Beware javascript date function displays a new 
+   * date in local time in console.
    */
   function getLimit(view) {
     let obj = {
@@ -38,8 +38,7 @@ var app = angular.module('weatherServices', [])
       hourly:             15*60*1000,   // cache
       tenday:           6*60*60*1000,   // cache
       radar:              20*60*1000,   // cache, 20 minutes
-      // month:                    1000,   // verifies we have latest html  ---  TESTING
-      month:         1*24*60*60*1000,   // verifies we have latest html
+      month:            6*60*60*1000,   // verifies we have latest html or current month
       weather_DB:   11*24*60*60*1000,   // removal from indexedDB
       radar_DB:         8*60*60*1000    // removal from indexedDB, 8 hours
     };
@@ -162,15 +161,6 @@ var app = angular.module('weatherServices', [])
 
     return obj;
   }
-  this.getIdFromList = function(id, arr) {
-    let response;
-    for(let x of arr) {
-      if (x.id === id) {
-        response = x;
-      }
-    }
-    return response;
-  }
 })
 .service('wData', function($filter, $location, $timeout, wDates, wUtils) {
   /**
@@ -238,14 +228,7 @@ var app = angular.module('weatherServices', [])
     return 'month-' + zip + '-' + year + month;
   }
   
-  // data.createMonthObj     = function(zip, yr, mon) {
   data.createMonthObj     = function() {
-      // if (!yr){
-    //   let d = new Date();
-    //   yr  = d.getFullYear();
-    //   mon = d.getMonth();      
-    // }
-
     return {
       year:       0,
       month:      0,
@@ -253,10 +236,8 @@ var app = angular.module('weatherServices', [])
       complete:   false,
       html:       '',
       id:         ''
-      // weather:    {} // includes html calendar and monthly totals.
     }
   }
-  // data.createMonthUser = function(zip) {
   function createMonthUser() {
     let d   = new Date(),
       yr  = d.getFullYear(),
@@ -266,16 +247,12 @@ var app = angular.module('weatherServices', [])
       year:       yr,
       month:      mon,
       monthText:  months[mon],
-      // id:         data.createMonthId(zip, yr, mon),
-      prefetch:   false,
-      timeoutId:  null,
       id:        function() {
-        // convert to  wu/python month format for id.
         let zip = data.info.zip,
             mon = this.month,
             yr  = this.year;
 
-        mon += 1;
+        mon += 1; // convert to  wu/python month format for id.
         mon = (mon > 9) ? mon.toString() : '0' + mon.toString();
         yr  = yr.toString();
           
@@ -286,31 +263,14 @@ var app = angular.module('weatherServices', [])
   // data.monthUser = data.createMonthUser();
   data.incrementMonth     = function(next) {
     /**
-     * Increments month from UI arrow change
+     * Accepts a boolean val to either increments month object forward or backward from UI arrow change.
      */
     let m = data.monthUser,
         r = wDates.incrementMonth(m.month, m.year, next);
     
-    // if (next) {
-    //   if(m.month < 11) {
-    //     m.month++;
-    //   } else {
-    //     m.month = 0;
-    //     m.year++;
-    //   }
-    // } else {
-    //   if(m.month > 0) {
-    //     m.month--;
-    //   } else {
-    //     m.month = 11;
-    //     m.year--;
-    //   }
-    // }
-
     m.month     = r.month;
     m.year      = r.year;
     m.monthText = data.months[m.month];
-    m.future    = next;                   // for prefetching    
   }
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
@@ -578,33 +538,6 @@ var app = angular.module('weatherServices', [])
       request.onerror = function(e){
         console.log('wDB._get error:', e);
         deferred.reject(id);
-        // deferred.reject('could not retrieve entry from DB');
-      }
-    }
-    
-    this.waitFor('open').then(r => get_val())
-
-    return deferred.promise;
-  }
-  this._get2 = function(id) {
-    var deferred = $q.defer();
-    
-    function get_val(){
-      var request = db.transaction([STORE_NAME], 'readonly')
-      .objectStore(STORE_NAME)
-      .get(id);
-      
-      request.onsuccess = function(response){
-        let r = response.target.result;
-        if (r && r.value){
-          deferred.resolve(r.value);
-        } else {
-          deferred.resolve({undefinedId: id});
-        }
-      }
-      request.onerror = function(e){
-        console.log('wDB._get error:', e);
-        deferred.reject('could not retrieve', id, 'from DB');
       }
     }
     
@@ -747,11 +680,12 @@ var app = angular.module('weatherServices', [])
      * For requesting data, at the moment only month data, which is outside of what is displayed 
      * to the user, i.e. prefetching data.
      */
-    let url = window.location.origin + '/getmonth';
+    let url   = window.location.origin + '/getmonth',
+        data  = Object.assign({}, obj);
 
-    obj.month += 1; // Convert for python, i.e. Jan = 1.
+    data.month += 1; // Convert for python, i.e. Jan = 1.
 
-    return $http.post(url, obj);
+    return $http.post(url, data);
   }
   function httpReq(view){
     let url     = window.location.origin, 
@@ -766,30 +700,11 @@ var app = angular.module('weatherServices', [])
       data.width          = screen.width;
       data.radius         = wData.info.radarUser.zoom.toString();
       url                 += '/getradar';
-      // _url                = '/getradar';
       config.responseType = 'blob';
-      // config      = {responseType: 'blob'};
-    } else if(view === 'month'){
-      // id is set on server to verify it always matches.
-      data.year   = wData.monthUser.year;
-      data.month  = wData.monthUser.month + 1;  // convert to python / wu month, i.e. Jan=1
-      // data.year   = wData.info.monthUser.year;
-      // data.month  = wData.info.monthUser.month + 1;  // convert to python / wu month, i.e. Jan=1
-      // data.complete   = false;
-      url         += '/getmonth';
-      // _url            = '/getmonth';
-    } else if(view === 'monthPrefetch'){
-      data.year   = wData.monthUser.yearPrefetch;
-      data.month  = wData.monthUser.monthPrefetch + 1;  // convert to python / wu month, i.e. Jan=1
-      data.view   = 'month';
-      url         += '/getmonth';
     } else{
       data.id = wData.info.id;
       url     += '/getweather';
-      // _url    = '/getweather';
     }
-    // TODO TESTING: MOVE URL = ...ORIGIN TO TOP AND DO A URL += IN THE IF'S
-    // let url = window.location.origin + _url;
     return $http.post(url, data, config); 
   }
   function createTempRadarObj(r, lastServReq) {
@@ -988,24 +903,6 @@ var app = angular.module('weatherServices', [])
   }
   function setMonthFromDB() {
     /* if it exists, retrieves from indexedDB or creates a new month object to display */
-    // CONSIDER REMOVING THE DEFER AND JUST GO. I DO NOT USE THE REJECTED STATE.
-    // ALSO CONSIDER A TRY CATCH INSTEAD OF IF ( R && R.VALUE &&...)
-    // DEPRECATE IF UNUSED.
-    let id        = wData.monthUser.id(),
-        deferred  = $q.defer();
-    
-    wDB._get(id).then(r => {
-      if ( r && r.value && r.value.id === id ){
-        wData.info.month = r.value;
-        deferred.resolve('Successfully retrieved:', id);
-      } else {
-        deferred.reject('Failed to retrieve:', id);
-      }
-    })
-    return deferred.promise;
-  }  
-  function setMonthFromDB2() {
-    /* if it exists, retrieves from indexedDB or creates a new month object to display */
     let id = wData.monthUser.id();
     
     wDB._get(id).then(r => {
@@ -1036,86 +933,56 @@ var app = angular.module('weatherServices', [])
     return arr;
   }
   function wDBMonthNeedsUpdating(month) {
+    /**
+     * Determines if the month obj in the localDB needs updating. Returns the month obj if true, otherwise, false.
+     */
     let defer = $q.defer();
+
     wDB._get(month.id).then(r => {
-      // console.log('getWDBMonth response:', r);
       if (r && r.value) {
-        let expired = wDates.isExpired(r.value.lastSuccessfulCheck, 'month');
-        // console.log('id', r.id, 'expired:', expired, 'complete', r.value.complete);
-        if(r.value.complete === true && !expired) {
+        let expired   = wDates.isExpired(r.value.lastSuccessfulCheck, 'month'),
+            complete  = month.complete || month.temporary_complete;
+
+        if (complete && !expired) {
           defer.resolve(false);
         }
       }
+
       defer.resolve(month);
     })
+
     return defer.promise;
   }
   function refreshMonth4() {
     let arrInd = [0, -1, -2, 1],
-        arrMonths = createArrMonths(wData.monthUser, arrInd),
+        months = createArrMonths(wData.monthUser, arrInd),
         promises = [],
-        monthIdToUpdate, // REMOVE ??
-        monthToUpdate, 
-        expired;
+        monthToUpdate;
 
-    setMonthFromDB2();
-    for (let m of arrMonths) {
-      // console.log('m.id:', m.id);
-      // promises.push(wDB._get2(m.id));
-      promises.push(wDBMonthNeedsUpdating(m));
+    setMonthFromDB();
+
+    for (let month of months) {
+      promises.push(wDBMonthNeedsUpdating(month));
     }
     Promise.all(promises).then( responses => {
-      // console.log('promises response:', responses);
       for (let r of responses) {
-        // console.log('r in for responses loop:', r);
         if (!monthToUpdate) {
-          // console.log('setting month to update :', r);
           monthToUpdate = r;  
         }
-      //   if (!monthIdToUpdate) {
-      //     expired = wDates.isExpired(r.lastSuccessfulCheck, 'month');
-      //     if (r.complete === false || expired) {
-      //       monthIdToUpdate = r.id;
-      //     } else if (r.undefinedId) {
-      //       monthIdToUpdate = r.undefinedId;
-      //     }
-      //   }
       }
-      // if (monthIdToUpdate) {
-      //   let month = wUtils.getIdFromList(monthIdToUpdate, arrMonths);
-      //   console.log('requesting month.id from server:', month.id);
-      //   httpReqObj(month).then(r => {
-      //     console.log('month response:', r);
-      //     r.data.lastSuccessfulCheck = Date.now();
-      //     if (r && r.data && r.data.id === month.id) {
-      //       console.log('requestedId:', month.id, '. Will put r in db:');
-      //       // console.log('requestedId:', month.id, '. Will put r in db:', r);
-      //       // wDB._put(r.id, r);
-      //     }
-      //     if (r && r.data && r.data.id === wData.monthUser.id()){
-      //       console.log('will dispaly month response, id:', r.data.id);
-      //       // wData.info.month = r;
-      //     }
-      //   })
-      // }
       if (monthToUpdate) {
-        let month = monthToUpdate;
-        // console.log('requesting month.id from server:', month.id);
-        httpReqObj(month).then(r => {
-          // console.log('month response:', r);
-          r.data.lastSuccessfulCheck = Date.now();
-          if (r && r.data && r.data.id === month.id) {
-            // console.log('requestedId:', month.id, '. Will put r in db:');
-            // console.log('requestedId:', month.id, '. Will put r in db:', r);
-            wDB._put(r.data.id, r.data);
-          }
-          if (r && r.data && r.data.id === wData.monthUser.id()){
-            console.log('will dispaly month response, id:', r.data.id);
-            wData.info.month = r.data;
+        httpReqObj(monthToUpdate).then(r => {
+          try {
+            r.data.lastSuccessfulCheck = Date.now();
+            if (r.data.id === wData.monthUser.id()) {
+              wData.info.month = r.data;      // Display data to screen.
+            }
+            wDB._put(r.data.id, r.data);      // Save data to local DB.
+          } catch (e) {
+            console.log('Could not set month object from server to screen or DB.');
           }
         })
       }
-      
     })
   }
   function refreshRadar() {
