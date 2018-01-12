@@ -130,7 +130,7 @@ class APILock(ndb.Model):
             else:
                 del self._lock.dates[:-500]
 
-            logging.info('\n\nSTARTING, num dates: %s, calls: %s' %(len(self._lock.dates), calls))
+            logging.info('num dates: %s, calls: %s' %(len(self._lock.dates), calls))
             # log_dates(self._lock.dates)
             for x in xrange(calls):
                 self._lock.dates.append(datetime.utcnow())

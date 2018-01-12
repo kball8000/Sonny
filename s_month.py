@@ -214,7 +214,6 @@ def create_cal_dict(cal):
 def update_month(month, urls):
     rpcs, results   = [], []
     cal             = month.info['cal']
-    # old_version     = ('html_version' not in month.info or month.info['html_version'] != HTML_VERSION)
 
     def handle_rpc(rpc):
         r = rpc.get_result()
@@ -237,19 +236,11 @@ def update_month(month, urls):
     for rpc in rpcs:
         rpc.wait()
     
-    # logging.info('Requests from WU COMPLETE\n\n')
     if len(urls):                                           # TESTING
         logging.info('Requests from WU COMPLETE')
 
-    # RIGHT HERE CREATE THE MONTH DICTIONARY SO NOT CYCLING THRU SO MANY TIMES.
-    # SEE IF THERE IS ANY OTHER PLACE IT MAY COME IN HANDY AND MOVE IT ACCORDINGLY.
-
     # SHOULD MOVE EVERYTHING BELOW AND CAL, OLD_VERSION VARS TO A PROCESS MONTH FUNCTION.
 
-    i = 0
-    t0 = time.time()
-
-    i = len(results)
     cal_dict = create_cal_dict(cal)
     for result in results:
         try:

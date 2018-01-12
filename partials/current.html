@@ -87,36 +87,32 @@
           Sunrise: {{o.info.current.weather.sunriseHour}}:{{o.info.current.weather.sunriseMin}} AM<br>
           Sunset: {{o.info.current.weather.sunsetHour}}:{{o.info.current.weather.sunsetMin}} PM
         </p>
-        <p>Avg High: {{o.info.current.weather.high_avg}}&deg;F
-          Low: {{o.info.current.weather.low_avg}}&deg;F
+        <p>Avg H: {{o.info.current.weather.high_avg}}&deg;F
+          L: {{o.info.current.weather.low_avg}}&deg;F
         </p>
-        <p>Record High: {{o.info.current.weather.high_record}}&deg;F
-          Year: {{o.info.current.weather.high_recordyear}}
-          Low: {{o.info.current.weather.low_record}}&deg;F
-          Year: {{o.info.current.weather.low_recordyear}}
+        <p>Record H: {{o.info.current.weather.high_record}}&deg;F
+          Yr: {{o.info.current.weather.high_recordyear}}
+          L: {{o.info.current.weather.low_record}}&deg;F
+          Yr: {{o.info.current.weather.low_recordyear}}
         </p>
       </md-card-content>
     </md-card>
+
+    <md-list ng-cloak ng-show='o.info.current.weather.alerts.length'>
+      <md-subheader style="margin:-12px 0px -18px 0px;"><h4>Weather Alerts</h4></md-subheader>
+      <md-list-item ng-repeat="alert in o.info.current.weather.alerts">
+        <div layout='column'>
+            <p>Type: {{alert.description}}</p>
+            <p>Date: {{alert.date}}</p>
+            <p>Expires: {{alert.expires}}</p>
+            <p style="font-family:courier, monospace;">{{alert.message}}</p>    
+        </div>
+      </md-list-item>
+    </md-list>
+
     <p>
         Current weather {{ o.info.current.weather.observation_time }}
-        <!-- Current weather last updated: {{ o.info.current.lastUpdated | date:'MMM dd yyyy hh:mm a'}} -->
     </p>
 
-    <!--    Weather Alerts    -->
-    <md-card ng-show='alerts.length'>
-      <md-card-content>
-        <ul class="list-group">
-          <li class='list-group-item' ng-repeat='alert in o.info.current.weather.alerts'>
-            Type: {{alert.description}}
-            <br>
-            Date: {{alert.date}}
-            <br>
-            Expires: {{alert.expires}}
-            <br>
-            <span style="font-family:courier, monospace;">{{alert.message}}</span>
-          </li>
-        </ul>
-      </md-card-content>
-    </md-card>
   </div>
 </div>

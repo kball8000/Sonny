@@ -302,7 +302,7 @@ class GetMonth(webapp2.RequestHandler):
 
         t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
-        logging.info('info from client: %s' %info)
+        logging.info('\n\ninfo: %s' %info)
         month                   = s_month.get_month(info)
         response                = month.info
         if 'cal' in response and 'updated' in response:

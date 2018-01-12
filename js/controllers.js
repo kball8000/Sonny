@@ -6,7 +6,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
 .config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
 })
-.controller('mainCtrl', function($scope, $interval, $location, $timeout, $http, $q, wData, wDB, wLog, wUtils, weather, autocomp) {
+.controller('mainCtrl', function($scope, $interval, $location, $http, wData, wDB, wLog, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
@@ -15,18 +15,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   $interval(weather.refreshForecasts, 10*1000);
 
   /* Get the weather data. */
-  function cancelMonthTimeouts() {
-    /**
-     * DEPRECATED IN 1.28g
-     * Just in case there are pending month timeouts. Maybe overkill, I guess they could just fizzle
-     * out on their own.
-     */
-    try {
-      $timeout.cancel(wData.info.month.timeout);
-    } catch (e){
-      angular.noop();
-    }    
-  }
   function loadCityList(r) {
     if (r && r.value) {
       autocomp.savedCities = r.value;
@@ -38,8 +26,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     try  {
       r.value.radar.imgUrl = URL.createObjectURL(r.value.radar.img);
     } catch (e) {
-      console.log('no radar image to create a URL.');
-      // angular.noop();
+      // console.log('no radar image to create a URL.');
+      angular.noop();
     }
   }
   function clearSpinners() {
@@ -54,7 +42,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       wData.info[el].spinner    = false;
       wData.info[el].spinnerId  = 0;
     }
-    // console.log('current: ', wData.info.current);
   }
   function changeCity(city, initialLoad) {
     let _id = 'weather-' + city.zip;
@@ -87,7 +74,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       changeCity(homeCity, true);
     })
   })
-
   $scope.logData = () => {    // TESTING
     function logTimeStamps(){
       let views = ['current', 'hourly', 'tenday', 'radar'],
@@ -95,10 +81,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       
       console.log('\n');
       for(let view of views) {
-        // lc = new Date(wUtils.objProp(wData.info, view + '.lastChecked'));
-        // lu = new Date(wUtils.objProp(wData.info, view + '.lastUpdated'));
-        lc = new Date(wUtils.objProp(wData.info[view].lastChecked));
-        lu = new Date(wUtils.objProp(wData.info[view].lastUpdated));
+        lc = new Date(wData.info[view].lastChecked);
+        lu = new Date(wData.info[view].lastUpdated);
         console.log(view, 'lastChecked (h:m:s): ', lc.getHours(), ':', lc.getMinutes(), ':', lc.getSeconds());
         console.log(view, 'lastUpdated (h:m:s): ', lu.getHours(), ':', lu.getMinutes(), ':', lu.getSeconds());
       }
@@ -119,14 +103,10 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     dlAnchorElem.setAttribute("download", wData.info.zip + "-weather.json");
     dlAnchorElem.click();
   }
-  $scope.getMonthId = () => {   // TESTING
-    console.log('id: ', wData.monthUser.idd());
-  }
   $scope.getMonthObj = () => {   // TESTING
     let url = window.location.origin + '/getmonthobj';
-    console.log('running url: ', url);
     $http.post(url).then(r => {
-      console.log(url + ' response: ', r);
+      console.log('Got month from server:', r);
     })
   }
   function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
@@ -147,14 +127,14 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       changeCity({zip: newZip, text: ''});
       
       $http.jsonp(url).then( r => {
-        let c       = r.data.RESULTS[0],
-            newZip  = c.name.substr(0,5);
+        let c           = r.data.RESULTS[0],
+            newZip      = c.name.substr(0,5),
+            newCityText = c.name.substr(8);
         
         if (wData.info.zip === newZip) {
-          let newCityText     = c.name.substr(8);
           wData.info.location = newCityText;
-          autocomp.addCity({zip: newZip, text: newCityText});
         }
+        autocomp.addCity({zip: newZip, text: newCityText});
       })
 
       document.getElementById('acInputId').blur();
@@ -186,7 +166,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     weather.refreshForecasts();
   })
 })
-.controller('monthCtrl', function($scope, $http, $q, $timeout, wDB, wData, wDates, weather) {
+.controller('monthCtrl', function($scope, $http, $q, wData, wDates, wDB, weather) {
   function resetRequestBtn() {
     $scope.requestDisabled  = false;
     $scope.requestText      = 'Add to Server Queue';    
@@ -203,33 +183,32 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   }  
   wDB.waitFor('loaded').then(r => {
     $scope.o      = wData;                // For html page
-    $scope.months = wData.months;
+    $scope.months = wDates.months;
     $scope.years  = getYearsArr();
 
     resetRequestBtn();
     weather.refreshForecasts();
   })
   $scope.newMonth = function(){
-    wData.monthUser.month = wData.months.indexOf(wData.monthUser.monthText)
+    wData.monthUser.month = wDates.months.indexOf(wData.monthUser.monthText);
     resetRequestBtn();
     weather.refreshForecasts();
   }
   $scope.nextMonth = function(next) {
     resetRequestBtn();
-    wData.incrementMonth(next);
+    wDates.incrementMonth(wData.monthUser, next);
     weather.refreshForecasts();
   }
   $scope.requestQueue = function() {
     $scope.requestDisabled = true;
     $scope.requestText = 'Request Sent';
-    let url = window.location.origin + '/addtoqueue',
-        data = {
+    let data = {
           zip:      wData.info.zip,
           year:     wData.monthUser.year,
-          month:    wData.monthUser.month + 1,
+          month:    wData.monthUser.month,
           view:     'month'
         };
-    $http.post(url, data);
+    weather.httpReqObj(data, '/addtoqueue');
   }
 })
 .controller('tendayCtrl', function($scope, wDB, wData, weather) {
@@ -242,7 +221,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
 })
 .controller('radarCtrl', function($scope, wDB, wData, weather) {
   wDB.waitFor('loaded').then(r => {
-    console.log('radar tab clicked');
     $scope.o  = wData;
     weather.refreshForecasts();
   })

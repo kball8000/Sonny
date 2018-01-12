@@ -44,6 +44,7 @@ var app = angular.module('weatherServices', [])
     };
     return obj[view];
   }
+  this.months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   this.recentCheck  = function (timestamp, view) {
     timestamp = timestamp || 0;
     // 2x stops spinner from running just because we at limit, but it has really been a while.
@@ -80,33 +81,7 @@ var app = angular.module('weatherServices', [])
     }
     return '';    
   }
-  this.isMoreRecent = function (d0, d1) {
-    /**
-     * Returns whether input array, d1 with min length 2, is greater than d1.
-     * Note date object will not return the desired result if only the year is input.
-     */
-    return new Date(...d0) > new Date(...d1);
-  }
-  this.incrementMonth = function (month, year, next) {
-    if (next) {
-      if(month < 11) {
-        month++;
-      } else {
-        month = 0;
-        year++;
-      }
-    } else {
-      if(month > 0) {
-        month--;
-      } else {
-        month = 11;
-        year--;
-      }
-    }
-    
-    return {month: month, year: year};
-  }
-  this.incrementMonth2 = function (obj, next) {
+  this.incrementMonth = function (obj, next) {
     if (next) {
       if(obj.month < 11) {
         obj.month++;
@@ -122,53 +97,18 @@ var app = angular.module('weatherServices', [])
         obj.year--;
       }
     }
-  }
-  this.isHistory        = function (month, year) {
-    return new Date(year, month) < new Date();
-  }
-})
-.service('wUtils', function() {
-  this.objProp = function(obj, prop, value) {
-    /** 
-     * This is a getter and a setter, so value is an optional input.
-     * Takes an array or dotted string, i.e. 'group.user.lastname', then sets and returns the property 
-     * of the object. It is useful for nested objects.
-     */
-    function setP(_obj, _prop, _val){
-      try {
-        if (_val !== undefined && _obj.hasOwnProperty(_prop)) {
-          _obj[_prop] = _val;
-        }
-        return _obj[_prop];
-      } catch(e) {
-        return;
-      }    
+    if ('monthText' in obj) {
+      obj.monthText = this.months[obj.month];
     }
-
-    if(typeof prop === 'string') {
-      prop = prop.split('.');
-    }
-
-    let len     = prop ? prop.length : 0,
-        counter = 1,
-        val;
-    
-    for (let p of prop) {
-      val = (len === counter) ? value : undefined;
-      obj = setP(obj, p, val);
-      counter++;
-    }
-
-    return obj;
   }
 })
-.service('wData', function($filter, $location, $timeout, wDates, wUtils) {
+.service('wData', function($filter, $location, $timeout, wDates) {
   /**
    * This object is the main object displayed. It is common / reused among the different pages, 
    * i.e. current / hourly... data object contains all weather info per zip code.
    */ 
   
-  let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   let data = {
     info: {
       current:    {},
@@ -193,7 +133,7 @@ var app = angular.module('weatherServices', [])
     this.radar      = data.createRadarObj(city.zip);
     this.radarUser  = data.createRadarUserObj(city.zip);
   }  
-  data.months = months;
+  // data.months = months;
   // See autocomplete service for explanation of setHome.
   data.setHome            = {flag: false, city: {}};
   data.createForecastObj  = function(dict) {
@@ -206,16 +146,7 @@ var app = angular.module('weatherServices', [])
       spinner:     false
     };
   }
-  data.createMonthId      = function(zip, yr, mon) {
-
-    // convert to  wu/python month format for id.
-    mon += 1;
-    mon = (mon > 9) ? mon.toString() : '0' + mon.toString();
-    yr  = yr.toString();
-      
-    return 'month-' + zip + '-' + yr + mon;
-  }
-  data.createMonthId2     = function(obj) {
+  data.createMonthId      = function(obj) {
 
     // convert to  wu/python month format for id.
     let month = obj.month,
@@ -227,12 +158,12 @@ var app = angular.module('weatherServices', [])
 
     return 'month-' + zip + '-' + year + month;
   }
-  
   data.createMonthObj     = function() {
     return {
       year:       0,
       month:      0,
-      monthText:  data.months[0],
+      monthText:  wDates.months[0],
+      // monthText:  data.months[0],
       complete:   false,
       html:       '',
       id:         ''
@@ -246,7 +177,8 @@ var app = angular.module('weatherServices', [])
     return {
       year:       yr,
       month:      mon,
-      monthText:  months[mon],
+      monthText:  wDates.months[mon],
+      // monthText:  months[mon],
       id:        function() {
         let zip = data.info.zip,
             mon = this.month,
@@ -259,18 +191,6 @@ var app = angular.module('weatherServices', [])
         return 'month-' + zip + '-' + yr + mon;
       }
     }
-  }
-  // data.monthUser = data.createMonthUser();
-  data.incrementMonth     = function(next) {
-    /**
-     * Accepts a boolean val to either increments month object forward or backward from UI arrow change.
-     */
-    let m = data.monthUser,
-        r = wDates.incrementMonth(m.month, m.year, next);
-    
-    m.month     = r.month;
-    m.year      = r.year;
-    m.monthText = data.months[m.month];
   }
   data.createRadarId      = function(zip, zoom) {
     let height  = screen.height,
@@ -342,7 +262,7 @@ var app = angular.module('weatherServices', [])
       data.info.current.lastChecked = d;
       data.info.hourly.lastChecked  = d;
     } else {
-      wUtils.objProp(data.info, view + '.lastChecked', d);
+      data.info[view].lastChecked = d;
     }
   }
   data.updateExpiredMsg = function(_view) {
@@ -674,19 +594,23 @@ var app = angular.module('weatherServices', [])
 
   }
 })
-.service('weather', function($http, $q, $timeout, wData, wDates, wDB, wLog, wUtils, autocomp){
-  function httpReqObj(obj){
+.service('weather', function($http, $q, $timeout, wData, wDates, wDB, wLog, autocomp){
+  function httpReqObj(obj, relativeUrl){
     /**
      * For requesting data, at the moment only month data, which is outside of what is displayed 
      * to the user, i.e. prefetching data.
      */
-    let url   = window.location.origin + '/getmonth',
+    let url   = window.location.origin + relativeUrl,
         data  = Object.assign({}, obj);
 
     data.month += 1; // Convert for python, i.e. Jan = 1.
 
     return $http.post(url, data);
   }
+  this.httpReqObj = function(obj, url){
+    httpReqObj(obj, url)
+  }
+
   function httpReq(view){
     let url     = window.location.origin, 
         config  = {},
@@ -752,9 +676,6 @@ var app = angular.module('weatherServices', [])
             if(newRadar.id === requestedId){
               updateViewData('radar', newRadar);
               wDB._put(wData.info.id, wData.info);
-              // wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
-            // } else {                                // CONSIDER REPLACING WITH BELOW
-              // wDB._put(newRadar.id, newRadar);      // CONSIDER REPLACING WITH BELOW
             }
             wDB._put(newRadar.id, newRadar);        // CONSIDER REPLACING ABOVE WITH THIS LINE.
             wData.info.radar.errorMsg = '';
@@ -779,18 +700,7 @@ var app = angular.module('weatherServices', [])
     var obj = wData.info[view];
 
     if(view === 'radar') {
-      // console.log('HI, setting RADAR DATA FOR VIEW, newData: ', newData);
       wData.info.radar = newData;
-      // console.log('Date.now(): ', Date.now());
-      // console.log('HI, setting RADAR DATA FOR VIEW, obj: ', wData.info.radar);
-      // wData.updateExpiredMsg('radar');
-    } else if(view === 'month') {
-      // console.log('updateviewdata, obj.weather > newdata: ', newData);
-      // obj.complete = newData.complete;
-      // obj.weather  = newData.weather;
-      wData.info.month = newData;
-      // wData.info.month.lastSuccessfulCheck = Date.now();
-
     } else {    // current / hourly / tenday
       if( 'error' in newData ) {
         obj.errorMsg    = newData.error;
@@ -798,7 +708,6 @@ var app = angular.module('weatherServices', [])
         obj.weather     = newData[view];
         obj.lastUpdated = Date.now();
         obj.errorMsg    = '';
-        // wData.updateExpiredMsg(view);
       }
     }
   }
@@ -822,7 +731,6 @@ var app = angular.module('weatherServices', [])
     if(expiredData){
       // Stops spinner from going all the time on a bad network connection / slow device.      
       if (!recentCheck) {
-        // console.log('starting spinner for ', view);
         spinnerId = wData.setSpinner(view, true);
       }
 
@@ -845,61 +753,12 @@ var app = angular.module('weatherServices', [])
         updateExpiredMsg();
         wData.setSpinner(view, false, spinnerId);
 
-        // console.log('end of requestView try');
       }, e => {
         wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ' + navigator.onLine + ', error: ' + e);
         updateExpiredMsg();
         wData.setSpinner(view, false, spinnerId);
-      // }, () => {
-      //   console.log('finally of requestView try');
-      //   updateExpiredMsg();
-      //   wData.setSpinner(view, false, spinnerId);        
       })
     }
-  }
-  function createNewMonth(data) {
-    /* Create a month object for storing in the DB. Do this to avoid async problem with what is
-     in the main weather.month object vs the month of the returned data */
-
-     // DEPRECATED 1.30c
-
-    var zip       = data.zip,
-        yr        = data.year,
-        mon       = data.month - 1, // Convert to JS month, i.e. Jan=0.
-        newMonth  = wData.createMonthObj(zip, yr, mon);
-    
-    newMonth.id       = data.id;
-    newMonth.weather  = data.weather;
-
-    return newMonth;
-  }
-
-  function refreshMonth() {
-
-    httpReq('month').then(r => {
-      try{
-        // console.log('returned month data: ', r);
-        if (wData.monthUser.id() === r.data.id){
-          updateViewData('month', r.data);
-          // wData.info.month.lastSuccessfulCheck = Date.now();
-          wData.info.month.lastSuccessfulCheck = Date.now();
-          wDB._put(wData.info.id, wData.info);
-        }
-        // Save to DB
-        // let newMonth = createNewMonth(r.data);    // CONSIDER REPLACING WITH BELOW
-        // wDB._put(newMonth.id, newMonth);          // CONSIDER REPLACING WITH BELOW
-        // wDB._put(wData.info.month.id, Object.assign({}, wData.info.month)); // TRY THIS INSTEAD OF ABOVE 2 LINES.
-        r.data.lastSuccessfulCheck = Date.now();
-        // wDB._put(r.data.id, r.data);
-        wDB._put(r.data.id, Object.assign({}, r.data));
-    } catch (e) {
-        wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
-        console.log('Failed to update Month with successful server req, error: ', e);
-      }
-    }, e => { 
-      wLog.log('error', 'Failed to update Month with successful server request data, error: ', e);
-      console.log('Failed to update Month with failed server request.');
-    })
   }
   function setMonthFromDB() {
     /* if it exists, retrieves from indexedDB or creates a new month object to display */
@@ -915,7 +774,7 @@ var app = angular.module('weatherServices', [])
     /**
      * Creates an array of months offset from the seed month.
      */
-    let arr = [], newMonth, next;
+    let arr = [], newMonth;
     for(let i of offsets) {
       newMonth = {
         month:  seedMonth.month,
@@ -924,10 +783,10 @@ var app = angular.module('weatherServices', [])
         zip:    wData.info.zip
       }
       while (i !== 0) {
-        wDates.incrementMonth2(newMonth, (i > 0));
+        wDates.incrementMonth(newMonth, (i > 0));
         i = (i > 0) ? --i : ++i;
       }
-      newMonth.id = wData.createMonthId2(newMonth);
+      newMonth.id = wData.createMonthId(newMonth);
       arr.push(newMonth);
     }
     return arr;
@@ -940,20 +799,17 @@ var app = angular.module('weatherServices', [])
 
     wDB._get(month.id).then(r => {
       if (r && r.value) {
-        let expired   = wDates.isExpired(r.value.lastSuccessfulCheck, 'month'),
-            complete  = month.complete || month.temporary_complete;
-
-        if (complete && !expired) {
+        let expired = wDates.isExpired(r.value.lastSuccessfulCheck, 'month');
+        if (r.value.complete && !expired) {
           defer.resolve(false);
         }
       }
-
       defer.resolve(month);
     })
 
     return defer.promise;
   }
-  function refreshMonth4() {
+  function refreshMonth() {
     let arrInd = [0, -1, -2, 1],
         months = createArrMonths(wData.monthUser, arrInd),
         promises = [],
@@ -967,11 +823,12 @@ var app = angular.module('weatherServices', [])
     Promise.all(promises).then( responses => {
       for (let r of responses) {
         if (!monthToUpdate) {
-          monthToUpdate = r;  
+          monthToUpdate = r;
         }
       }
+
       if (monthToUpdate) {
-        httpReqObj(monthToUpdate).then(r => {
+        httpReqObj(monthToUpdate, '/getmonth').then(r => {
           try {
             r.data.lastSuccessfulCheck = Date.now();
             if (r.data.id === wData.monthUser.id()) {
@@ -1056,17 +913,9 @@ var app = angular.module('weatherServices', [])
       
     } else if(view === 'month'){
       /**
-       * Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg.
-       * 
+       * Same comment as radar. 3 ways to get here, on load-wDB, on date chg, or zipcode chg. 
        */ 
-      // let month   = wData.info.month;
-      // let expired = wDates.isExpired(month.lastSuccessfulCheck, 'month');
-
-      // if(!month.complete || expired){
-      //   refreshMonth();
-      // }
-
-      refreshMonth4();
+      refreshMonth();
 
       $timeout(refreshView, 1000, true, 'current');
       $timeout(refreshView, 1000, true, 'tenday');
