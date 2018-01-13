@@ -106,7 +106,7 @@
         <div ng-view></div>
 
         <p id='version' ng-cloak>
-          Version 1.30d - {{main.info.location}} - {{main.info.zip}}
+          Version 1.30e - {{main.info.location}} - {{main.info.zip}}
         </p>
         <ul style='list-style-type:none;'>
           <li ng-repeat='t in main.requestDurations track by $index'>{{t}}</li>
@@ -116,6 +116,7 @@
         <button ng-click='logData()'>logData</button>
         <button ng-click='downloadWeather()'>downloadWeather</button>
         <button ng-click='getMonthObj()'>GetMonth</button>        
+        <button ng-click='getDates()'>Dates</button>        
       </div>
     </div>
   </body>

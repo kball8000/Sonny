@@ -92,7 +92,13 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     console.log('data: ', wData);
     console.log('autocomp: ', autocomp);
     wDB._getAll().then(r => console.log('wDB: ', r))
-    wLog.getLogs().then(r => console.log('logs: ', r))
+    wLog.getLogs().then(r => {
+      console.log('logs: ', r)},
+      e => {
+        console.log('Msg:', e.value);
+      }
+
+    )
   }
   $scope.downloadWeather = () => {   // TESTING
     console.log('downloading weather');
@@ -107,6 +113,13 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     let url = window.location.origin + '/getmonthobj';
     $http.post(url).then(r => {
       console.log('Got month from server:', r);
+    })
+  }
+  $scope.getDates = () => {   // TESTING
+    // let url = window.location.origin + '/getdates';
+    let url = 'https://kball-test-tools.appspot.com/getdates';
+    $http.post(url).then(r => {
+      console.log('Dates:', r);
     })
   }
   function testGeoLocation() {      // NEW FUNCTIONALITY TESTING

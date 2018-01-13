@@ -302,7 +302,7 @@ class GetMonth(webapp2.RequestHandler):
 
         t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
-        logging.info('\n\ninfo: %s' %info)
+        logging.info('info: %s' %info)
         month                   = s_month.get_month(info)
         response                = month.info
         if 'cal' in response and 'updated' in response:
@@ -343,6 +343,24 @@ class GetMonthObj(webapp2.RequestHandler):
 
 # NOTE when testing functions. Get requests get intercepted by web app, so they only run once.
 # Easiest fix is to run Post requests.
+class GetDates(webapp2.RequestHandler):
+    def post(self):
+        dates       = models.APILock.get(calls=0)
+        attr        = ['year', 'month', 'day', 'hour', 'minute', 'second']
+        response    = []
+
+        # create array of string type dates in yyyy-mm-dd-hh-mm-ss format.
+        for d in dates:
+            t1  = [getattr(d, att) for att in attr]
+            t2  = [str(x).zfill(2) for x in t1]
+            v   = '-'.join(t2)
+            response.append(v)
+
+        if dates:
+            self.response.write(json.dumps(response))
+        else:
+            self.response.write(json.dumps({'msg':'nothing retrieved from datastore'}))
+
 
 app = webapp2.WSGIApplication([
     ('/', Basic),
@@ -358,6 +376,7 @@ app = webapp2.WSGIApplication([
     # TESTING
     ('/addtoqueue', AddToQueue),
     ('/getmonthobj', GetMonthObj),
+    ('/getdates', GetDates),
     # ('/modifycal', ModifyCal),
     
     # At end of list so I do not need to worry about EOL comma

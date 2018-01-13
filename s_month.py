@@ -161,8 +161,8 @@ def get_urls_to_update(month):
     days in month need to be populated then are available, i.e. 27 of 30 days were previously 
     populated with data from wu."""
     # Calls are reserved or left alone so there are still some available for a current or tenday request.
-    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
     
     dates               = models.APILock.get(calls_requesting)
@@ -230,14 +230,14 @@ def update_month(month, urls):
         urlfetch.make_fetch_call(rpc, url)
         rpcs.append(rpc)
 
-    if len(urls):                                           # TESTING
-        logging.info('Requests sent, now we wait...')       # TESTING
+    # if len(urls):                                           # TESTING
+        # logging.info('Requests sent, now we wait...')       # TESTING
 
     for rpc in rpcs:
         rpc.wait()
     
-    if len(urls):                                           # TESTING
-        logging.info('Requests from WU COMPLETE')
+    # if len(urls):                                           # TESTING
+        # logging.info('Requests from WU COMPLETE')
 
     # SHOULD MOVE EVERYTHING BELOW AND CAL, OLD_VERSION VARS TO A PROCESS MONTH FUNCTION.
 
@@ -308,7 +308,7 @@ def update_end_month(month, end):
     if current_row[0]['date'] == non_current_row[0]['date']:
         for i, d in enumerate(current_row):
             if d['updated']:
-                logging.info('day %s is updated: : %s' %(d['date'], d['updated']))
+                # logging.info('day %s is updated: : %s' %(d['date'], d['updated']))
                 non_current_row[i]  = d.copy()
                 obj.info['updated'] = True
 
@@ -322,7 +322,7 @@ def save_month(_month):
     set_totals(_month.info)
     
     if _month.info['updated']:
-        logging.info('savemonth, month %s %s is updated?: %s' %(_month.info['month'], _month.info['year'], _month.info['updated']))
+        # logging.info('savemonth, month %s %s is updated?: %s' %(_month.info['month'], _month.info['year'], _month.info['updated']))
         # _month = clear_day_updates(_month)
         clear_day_updates(_month)
         _month.info['updated'] = False

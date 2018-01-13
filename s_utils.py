@@ -1,16 +1,17 @@
 from datetime import datetime, timedelta
 import keys
-# import logging
+import logging
 
 def max_calls(_typ):
     """ For notes, see method: api_calls_avail."""
     obj = {
-        'minute': 10, 
-        'daily': 500
+        'minute':   10,
+        'daily':    500
     }
     return obj[_typ]
 def api_calls_avail(dates):
-    """ With a free Weather Underground (wu) account you only get so many API calls. If exceeded too many times, account could be suspended. This throttles the app to avoid exceeding limits."""
+    """ With a free Weather Underground (wu) account you only get so many API calls. If exceeded too 
+    many times, account could be suspended. This throttles the app to avoid exceeding limits."""
     def get_avail(_dates, avail, time_delta):
         for date_time in reversed(_dates):
             if (now - date_time) < time_delta:
@@ -37,7 +38,8 @@ def api_calls_avail(dates):
         
     return avail
 def day_api_calls_avail(dates):
-    """ Checking that there are at least 'reserved' calls left for month. I want to leave some for now/tenday use. Also, start further into array if not full. """
+    """ Checking that there are at least 'reserved' calls left for month. I want to leave some for 
+    now/tenday use. Also, start further into array if not full. """
     
     avail       = True
     reserved    = 40
@@ -46,6 +48,7 @@ def day_api_calls_avail(dates):
     if start_point > -1:
         yesterday = datetime.utcnow() - timedelta(days=1)
         if dates[start_point] > yesterday:
+            logging.info('Now into the 40 reserved API calls left for day')
             avail = False
             
     return avail
