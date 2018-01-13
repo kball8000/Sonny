@@ -97,7 +97,6 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       e => {
         console.log('Msg:', e.value);
       }
-
     )
   }
   $scope.downloadWeather = () => {   // TESTING
