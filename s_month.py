@@ -164,22 +164,24 @@ def get_urls_to_update(month):
     # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
     calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
     calls_requesting    = s_utils.max_calls('minute') - calls_reserved
+    # logging.info('calls requesting for month: %s' %calls_requesting)
     
     dates               = models.APILock.get(calls_requesting)
-    temp_dates          = [dates.pop() for x in xrange(calls_requesting)]
+    t0 = time.time()    # TESTING
+
+    # Consider changing name to requested_dates.
+    temp_requested_dates          = [dates.pop() for x in xrange(calls_requesting)]
     
     _zip                = month.info['zip']
     cal                 = month.info['cal']
     urls                = []
 
-    # Now check how many calls are actually available and return the rest.
-    # Also checking against daily quota and leaving ~40 for forecast calls.
+    # Check number calls actually available, per minute and day limit, leaving ~40 for forecast calls.
     avail               = s_utils.api_calls_avail(dates) - calls_reserved
     day_avail           = s_utils.day_api_calls_avail(dates)
     avail               = max(avail, 0) if day_avail else 0
-    num_to_return       = len(temp_dates) - avail
     
-    logging.info('month, avail: %s' %avail)
+    logging.info('month, avail:   %s' %avail)
 
     now = datetime.utcnow()
     for week in cal:
@@ -195,10 +197,15 @@ def get_urls_to_update(month):
                 break
             else:
                 pass
-    num_to_return += avail - len(urls)
+    
+    num_dates_used  = len(urls)     #added for clarity.
+    num_to_return   = len(temp_requested_dates) - num_dates_used
+    logging.info('num_to_return:  %s' %num_to_return)
+    logging.info('time to check number of dates:      %s' %(time.time()-t0))
 
     if num_to_return:
-        return_dates = [temp_dates.pop() for x in xrange(num_to_return)]
+        # return_dates = [temp_requested_dates.pop() for x in xrange(num_to_return)]
+        return_dates = temp_requested_dates[-num_to_return:0]
         models.APILock.return_dates(return_dates)
         
     return urls

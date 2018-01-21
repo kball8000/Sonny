@@ -122,7 +122,12 @@ class APILock(ndb.Model):
     _lock       = None
         
     @classmethod
-    def get(self, calls=1):        
+    def get(self, calls=1):
+        """ To avoid long system locks, works by temporarily reserving the number of calls requested. Later,
+        after determining the actual number available and the number used, we return unused. Based on theory
+        that it is fast to append and remove dates, but slow to determine num dates available. NOTE: after 
+        testing, this may not be true."""
+        t10 = time.time()        # TESTING
         with self._api_lock:
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
             if not self._lock:
@@ -131,22 +136,30 @@ class APILock(ndb.Model):
                 del self._lock.dates[:-500]
 
             # logging.info('num dates: %s, calls: %s' %(len(self._lock.dates), calls))
-            # log_dates(self._lock.dates)
+            t11 = time.time()
+            now = datetime.utcnow()         # comment is for testing
             for x in xrange(calls):
-                self._lock.dates.append(datetime.utcnow())
-            # logging.info('ENDING, num dates: %s' %len(self._lock.dates))
 
+                # now = datetime.utcnow()             # TESTING
+                self._lock.dates.append(now)        # TESTING
+            logging.info('time to append dates loop:            %s' %(time.time()-t11))
             self._lock.put()
 
+        logging.info('total time apiLock.get, append dates: %s' %(time.time()-t10))  # TESTING
         return self._lock.dates
     
     @classmethod
     def return_dates(self, dates):
+        t0 = time.time()        # TESTING
         with self._api_lock:
+            t2 = time.time()        # TESTING
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
+            logging.info('nDB time to get apilock, i.e. dates: %s' %(time.time()-t2))
+            t1 = time.time()        # TESTING
             for date in dates:
+                # logging.info('returning date: %s' %date)
                 self._lock.dates.remove(date)
-            # logging.info('removing number of dates: %s' %len(dates))
-            # logging.info('after removing dates, length: %s' %len(self._lock.dates))
+            logging.info('time to return dates loop:           %s' %(time.time()-t1))      # TESTING
             self._lock.put()
+        logging.info('total time to return dates:          %s' %(time.time()-t0))      # TESTING
         return True

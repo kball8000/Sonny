@@ -12,7 +12,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
-  $interval(weather.refreshForecasts, 10*1000);
+  // $interval(weather.refreshForecasts, 10*1000);    // comment is for testing
+  $interval(weather.refreshForecasts, 20*1000);       // TESTING
 
   /* Get the weather data. */
   function loadCityList(r) {
@@ -115,8 +116,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     })
   }
   $scope.getDates = () => {   // TESTING
-    // let url = window.location.origin + '/getdates';
-    let url = 'https://kball-test-tools.appspot.com/getdates';
+    let url = window.location.origin + '/getdates';
     $http.post(url).then(r => {
       console.log('Dates:', r);
     })

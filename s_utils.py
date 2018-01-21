@@ -13,6 +13,8 @@ def api_calls_avail(dates):
     """ With a free Weather Underground (wu) account you only get so many API calls. If exceeded too 
     many times, account could be suspended. This throttles the app to avoid exceeding limits."""
     def get_avail(_dates, avail, time_delta):
+        """ Takes the actual dates used previously, not the temporary dates I resevered and returns number
+        dates available."""
         for date_time in reversed(_dates):
             if (now - date_time) < time_delta:
                 avail -= 1
@@ -38,7 +40,7 @@ def api_calls_avail(dates):
         
     return avail
 def day_api_calls_avail(dates):
-    """ Checking that there are at least 'reserved' calls left for month. I want to leave some for 
+    """ Checking that there are at least 'reserved' calls left for month. Leave some for 
     now/tenday use. Also, start further into array if not full. """
     
     avail       = True
