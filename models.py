@@ -2,6 +2,9 @@ from google.appengine.ext import ndb
 from datetime import datetime
 import threading
 
+# custom modules
+import s_utils
+
 # debugging
 import logging
 import time
@@ -46,7 +49,54 @@ def get_id(info):
         _id += '-' + str(info['year']) + str(info['month']).zfill(2)
     
     return _id
+def is_history(d):
+    now     = datetime.utcnow()
+    request = datetime(d[0], d[1], d[2])
+    return request < now
+def is_recent(day):
+    if 'last_updated' in day:
+        now = int(time.time())
+        if now - day['last_updated'] < 5*60*60:
+            return True
+    return False
 
+def create_month_urls(data, dates):
+    # Calls are reserved or left alone so there are still some available for a current or tenday request.
+    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+
+    urls                = []
+
+    # Check number calls actually available, per minute and day limit, leaving ~40 for forecast calls.
+    avail               = s_utils.api_calls_avail(dates) - calls_reserved
+    day_avail           = s_utils.day_api_calls_avail(dates)
+    avail               = max(avail, 0) if day_avail else 0
+
+    logging.info('month, avail:   %s' %avail)
+    # logging.info('data: %s' %data)
+    # logging.info('data.keys: %s' %data.keys())
+
+    for week in data['cal']:
+        for day in week:
+            history             = is_history(day['date'])   # To avoid requesting data for a future date.
+            recently_checked    = is_recent(day)
+            if avail and not day['complete'] and history and not recently_checked:
+                obj = {'view': 'month', 'zip': data['zip'], 'date': day['date']}
+                urls.append(s_utils.create_url(obj))
+                avail -= 1
+            elif not avail or not history:
+                break
+            else:
+                pass
+
+    return urls
+def append_dates_to_lock(lock, num):
+    # logging.info('num: %s' %num)
+    if num:
+        now = datetime.utcnow()
+        for date in xrange(num):
+            lock.dates.append(now)
+        lock.put()
 class LogObj(ndb.Model):
     """Dataset for current, hourly and tenday objects"""
     logs    = ndb.JsonProperty(compressed=True)
@@ -122,7 +172,17 @@ class APILock(ndb.Model):
     _lock       = None
         
     @classmethod
-    def get(self, calls=1):
+    def get_dates(self):     # TESTING
+        lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
+        if not lock:
+            lock = self(id='apilock')
+        else:
+            del lock.dates[:-500]
+
+        return lock.dates
+
+    @classmethod
+    def get(self, calls=1):     # DEPRECTED 1.30g
         """ To avoid long system locks, works by temporarily reserving the number of calls requested. Later,
         after determining the actual number available and the number used, we return unused. Based on theory
         that it is fast to append and remove dates, but slow to determine num dates available. NOTE: after 
@@ -147,6 +207,31 @@ class APILock(ndb.Model):
 
         logging.info('total time apiLock.get, append dates: %s' %(time.time()-t10))  # TESTING
         return self._lock.dates
+
+    @classmethod
+    def get2(self, data):
+        """ Check to see if there api calls available and return url / list of urls to fetch data from WU."""
+
+        t10 = time.time()        # TESTING
+        with self._api_lock:
+            self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
+            if not self._lock:
+                self._lock = self(id='apilock')
+            else:
+                del self._lock.dates[:-500]
+
+            if data['view'] != 'month':
+                if s_utils.api_calls_avail(self._lock.dates):
+                    response = s_utils.create_url(data)
+                    append_dates_to_lock(self._lock, 1)
+                else:
+                    response = None
+            else:
+                response = create_month_urls(data, self._lock.dates)
+                append_dates_to_lock(self._lock, len(response))
+
+        logging.info('total time apiLock.get, append dates: %s' %(time.time()-t10))  # TESTING
+        return response
     
     @classmethod
     def return_dates(self, dates):

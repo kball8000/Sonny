@@ -203,10 +203,39 @@ def update_forecast(obj):
             obj.info['error'] = 'unknown error getting data from wu'
 
     return obj
+def update_forecast2(obj, url):
+    """For current, hourly, tenday and radar 
+    Input: Data is datastore object. 
+    Handles API lock as well as getting updated data from weather underground.
+    Output: data.weather which is Javascript object."""
+    
+    view    = obj.info['view']
+    _zip    = obj.info['zip']
+    func    = {
+        'current'   : process_current,
+        'tenday'    : process_tenday
+    }
 
-def update_radar(radar, info):
+    # url = s_utils.create_url(view, _zip)
+    raw = get_weather_underground_data(url)
+
+    # Consider moving this up to thd if else, they are not that commmon with each other.
+    if 'error' not in raw['response']:
+        result = func[view](raw)
+        for key in result.keys():
+            obj.info['lastUpdated'] = conv_py_date(datetime.utcnow(), 'li')
+            obj.info[key] = result[key]
+    else:
+        try:
+            obj.info['error'] = raw['response']['error']['description']
+        except:
+            obj.info['error'] = 'unknown error getting data from wu'
+
+    return obj
+
+def update_radar(radar, info, url):
     radar.error = ''
-    url = s_utils.create_url('radar', info['zip'], info)
+    # url = s_utils.create_url('radar', info['zip'], info)
     try:
         radar.image = get_weather_underground_data(url, False)
     except:
@@ -239,30 +268,31 @@ class GetWeather(webapp2.RequestHandler):
 
         info = json.loads(self.request.body)   # weather obj from page
 
-        # TESTING
-        # to_sleep = 5
-        # logging.info('to_sleep: %s' %to_sleep)
-        # time.sleep(to_sleep)
-        # END TESTING
-
         forecast_p      = models.Forecast.get_async(info)
-        dates           = models.APILock.get()
-        temp_date       = dates.pop()
+        # dates           = models.APILock.get()
+        # temp_date       = dates.pop()
 
-        if s_utils.api_calls_avail(dates):
+        # This will be a url to get data from Weather Underground.
+        url = models.APILock.get2(info)
+
+        # if s_utils.api_calls_avail(dates):
+        if url:
             forecast = forecast_p.get_result()
             if not forecast:
                 forecast    = models.Forecast.new_obj(info)
-                forecast    = update_forecast(forecast)
+                # forecast    = update_forecast(forecast)
+                forecast    = update_forecast2(forecast, url)
                 models.Forecast.w_put(forecast)
             elif not fresh_weather(forecast):
-                forecast    = update_forecast(forecast)
+                # forecast    = update_forecast(forecast)
+                forecast    = update_forecast2(forecast, url)
                 models.Forecast.w_put(forecast)
             else:
-                models.APILock.return_dates([temp_date])
+                pass
+                # models.APILock.return_dates([temp_date])
             _response = forecast.info
         else:
-            models.APILock.return_dates([temp_date])
+            # models.APILock.return_dates([temp_date])
             _response = {'error': 'no api keys available'}
         
         self.response.headers['Content-Type'] = 'text/javascript'
@@ -273,34 +303,39 @@ class GetRadar(webapp2.RequestHandler):
         urlfetch.set_default_fetch_deadline(15)
 
         info            = json.loads(self.request.body)
-        radar_id        = info['id']
         
-        radar_p         = models.Radar._get_async(radar_id)
-        dates           = models.APILock.get()
-        temp_date       = dates.pop()
+        radar_p         = models.Radar._get_async(info['id'])
+        # dates           = models.APILock.get()
+        # temp_date       = dates.pop()
+        url = models.APILock.get2(info)
 
-        if s_utils.api_calls_avail(dates):
+        # if s_utils.api_calls_avail(dates):
+        if url:
             radar = radar_p.get_result()
         
             if not radar:
-                radar       = models.Radar.new_obj(radar_id)
-                radar       = update_radar(radar, info)
+                radar       = models.Radar.new_obj(info['id'])
+                radar       = update_radar(radar, info, url)
+                # update_radar(radar, info, url)    # consider replacing line above with this.
+
                 models.Radar.w_put(radar)
             elif not fresh_weather(radar) or radar.error:
-                radar       = update_radar(radar, info)
+                radar       = update_radar(radar, info, url)
+                # update_radar(radar, info, url)    # consider replacing line above with this.
                 models.Radar.w_put(radar)
             else:
-                models.APILock.return_dates([temp_date])
+                pass
+                # models.APILock.return_dates([temp_date])
             send_radar(self, True, radar)
 
         else:
-            models.APILock.return_dates([temp_date])
+            # models.APILock.return_dates([temp_date])
             send_radar(self, False)
 class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        t0 = time.time()                                    # TESTING
+        # t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
         logging.info('%s' %info)
         month                   = s_month.get_month(info)
@@ -331,8 +366,8 @@ class GetMonthObj(webapp2.RequestHandler):
         obj = models.Forecast.get({
             'zip':      '61601',
             'view':     'month',
-            'year':     2018,
-            'month':    1
+            'year':     2017,
+            'month':    12
         })
         
         self.response.headers['Content-Type'] = 'text/javascript'
@@ -343,9 +378,10 @@ class GetMonthObj(webapp2.RequestHandler):
 
 # NOTE when testing functions. Get requests get intercepted by web app, so they only run once.
 # Easiest fix is to run Post requests.
-class GetDates(webapp2.RequestHandler):
+class GetDates(webapp2.RequestHandler):     # TESTING
     def post(self):
-        dates       = models.APILock.get(calls=0)
+
+        dates       = models.APILock.get_dates()
         attr        = ['year', 'month', 'day', 'hour', 'minute', 'second']
         response    = []
 

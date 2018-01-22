@@ -149,66 +149,6 @@ def set_totals(month):
     w['totalrainfall']  = round(w['totalrainfall'], 2)
     w['totalsnowfall']  = round(w['totalsnowfall'], 2)
     w['mean_temp']      = round(w['mean_temp']/num_days, 1) if num_days else 0.0
-def check_recent(day):
-    if 'last_updated' in day:
-        now = int(time.time())
-        if now - day['last_updated'] < 5*60*60:
-            return True
-    return False
-def get_urls_to_update(month): 
-    """ There are 2 reasons to return dates, api usage restriction from weather underground, 
-    i.e. 4 of 10 call/min have been used by current / tenday / other month request or less 
-    days in month need to be populated then are available, i.e. 27 of 30 days were previously 
-    populated with data from wu."""
-    # Calls are reserved or left alone so there are still some available for a current or tenday request.
-    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
-    calls_requesting    = s_utils.max_calls('minute') - calls_reserved
-    # logging.info('calls requesting for month: %s' %calls_requesting)
-    
-    dates               = models.APILock.get(calls_requesting)
-    t0 = time.time()    # TESTING
-
-    # Consider changing name to requested_dates.
-    temp_requested_dates          = [dates.pop() for x in xrange(calls_requesting)]
-    
-    _zip                = month.info['zip']
-    cal                 = month.info['cal']
-    urls                = []
-
-    # Check number calls actually available, per minute and day limit, leaving ~40 for forecast calls.
-    avail               = s_utils.api_calls_avail(dates) - calls_reserved
-    day_avail           = s_utils.day_api_calls_avail(dates)
-    avail               = max(avail, 0) if day_avail else 0
-    
-    logging.info('month, avail:   %s' %avail)
-
-    now = datetime.utcnow()
-    for week in cal:
-        for day in week:
-            d                   = day['date']
-            req                 = datetime(d[0], d[1], d[2])
-            history             = req < now         # To avoid asking WU for weather data on a future date.
-            recently_checked    = check_recent(day)
-            if avail and not day['complete'] and history and not recently_checked:
-                urls.append(s_utils.create_url('month', _zip, day['date']))
-                avail -= 1
-            elif not avail or not history:
-                break
-            else:
-                pass
-    
-    num_dates_used  = len(urls)     #added for clarity.
-    num_to_return   = len(temp_requested_dates) - num_dates_used
-    logging.info('num_to_return:  %s' %num_to_return)
-    logging.info('time to check number of dates:      %s' %(time.time()-t0))
-
-    if num_to_return:
-        # return_dates = [temp_requested_dates.pop() for x in xrange(num_to_return)]
-        return_dates = temp_requested_dates[-num_to_return:0]
-        models.APILock.return_dates(return_dates)
-        
-    return urls
 def create_date_key(date):
     return '-'.join([str(int(x)) for x in date])
 def create_cal_dict(cal):
@@ -338,7 +278,7 @@ def build_html_table(_month):
     # HTML_VERSION = '0.1r'
     old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
 
-    t0 = time.time()
+    # t0 = time.time()
 
     # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
     if (old_version or _month.info['updated']):
@@ -374,8 +314,8 @@ def build_html_table(_month):
         _month.info['html']         = html
         _month.info['html_version'] = HTML_VERSION
 
-        t1 = round(time.time()-t0, 5)
-        logging.info('Updating html table for month %s took %ss, ' %(_month.info['month'], t1))
+        # t1 = round(time.time()-t0, 5)
+        # logging.info('Updating html table for month %s took %ss, ' %(_month.info['month'], t1))
 
     # return _month 
 def get_month(info):
@@ -384,10 +324,11 @@ def get_month(info):
 
     month = models.Forecast.get(info)
     if not month:
+        logging.info('creating new month for year: %s, month: %s' %(info['year'], info['month']))
         month = create_month(info)
 
     if not month.info['complete']:
-        urls = get_urls_to_update(month)
+        urls = models.APILock.get2(month.info)
         months.append(update_month(month, urls))
         months.append(update_end_month(month, end=False))
         months.append(update_end_month(month, end=True))
