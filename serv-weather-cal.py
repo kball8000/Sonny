@@ -173,7 +173,7 @@ def process_tenday(raw):
 
     return {'tenday': tenday}
 
-def update_forecast(obj):
+def update_forecast(obj, url):
     """For current, hourly, tenday and radar 
     Input: Data is datastore object. 
     Handles API lock as well as getting updated data from weather underground.
@@ -186,37 +186,6 @@ def update_forecast(obj):
         'tenday'    : process_tenday
     }
 
-    url = s_utils.create_url(view, _zip)
-    raw = get_weather_underground_data(url)
-
-    # Consider moving this up to thd if else, they are not that commmon with each
-    # other
-    if 'error' not in raw['response']:
-        result = func[view](raw)
-        for key in result.keys():
-            obj.info['lastUpdated'] = conv_py_date(datetime.utcnow(), 'li')
-            obj.info[key] = result[key]
-    else:
-        try:
-            obj.info['error'] = raw['response']['error']['description']
-        except:
-            obj.info['error'] = 'unknown error getting data from wu'
-
-    return obj
-def update_forecast2(obj, url):
-    """For current, hourly, tenday and radar 
-    Input: Data is datastore object. 
-    Handles API lock as well as getting updated data from weather underground.
-    Output: data.weather which is Javascript object."""
-    
-    view    = obj.info['view']
-    _zip    = obj.info['zip']
-    func    = {
-        'current'   : process_current,
-        'tenday'    : process_tenday
-    }
-
-    # url = s_utils.create_url(view, _zip)
     raw = get_weather_underground_data(url)
 
     # Consider moving this up to thd if else, they are not that commmon with each other.
@@ -235,7 +204,6 @@ def update_forecast2(obj, url):
 
 def update_radar(radar, info, url):
     radar.error = ''
-    # url = s_utils.create_url('radar', info['zip'], info)
     try:
         radar.image = get_weather_underground_data(url, False)
     except:
@@ -266,33 +234,25 @@ class Basic(webapp2.RequestHandler):
 class GetWeather(webapp2.RequestHandler):
     def post(self):
 
-        info = json.loads(self.request.body)   # weather obj from page
-
-        forecast_p      = models.Forecast.get_async(info)
-        # dates           = models.APILock.get()
-        # temp_date       = dates.pop()
+        info        = json.loads(self.request.body)   # weather obj from page
+        forecast_p  = models.Forecast.get_async(info)
 
         # This will be a url to get data from Weather Underground.
         url = models.APILock.get2(info)
 
-        # if s_utils.api_calls_avail(dates):
         if url:
             forecast = forecast_p.get_result()
             if not forecast:
                 forecast    = models.Forecast.new_obj(info)
-                # forecast    = update_forecast(forecast)
-                forecast    = update_forecast2(forecast, url)
+                forecast    = update_forecast(forecast, url)
                 models.Forecast.w_put(forecast)
             elif not fresh_weather(forecast):
-                # forecast    = update_forecast(forecast)
-                forecast    = update_forecast2(forecast, url)
+                forecast    = update_forecast(forecast, url)
                 models.Forecast.w_put(forecast)
             else:
                 pass
-                # models.APILock.return_dates([temp_date])
             _response = forecast.info
         else:
-            # models.APILock.return_dates([temp_date])
             _response = {'error': 'no api keys available'}
         
         self.response.headers['Content-Type'] = 'text/javascript'
