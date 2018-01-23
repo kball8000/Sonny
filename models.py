@@ -62,8 +62,8 @@ def is_recent(day):
 
 def create_month_urls(data, dates):
     # Calls are reserved or left alone so there are still some available for a current or tenday request.
-    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
 
     urls                = []
 
@@ -73,8 +73,6 @@ def create_month_urls(data, dates):
     avail               = max(avail, 0) if day_avail else 0
 
     logging.info('month, avail:   %s' %avail)
-    # logging.info('data: %s' %data)
-    # logging.info('data.keys: %s' %data.keys())
 
     for week in data['cal']:
         for day in week:
@@ -91,7 +89,6 @@ def create_month_urls(data, dates):
 
     return urls
 def append_dates_to_lock(lock, num):
-    # logging.info('num: %s' %num)
     if num:
         now = datetime.utcnow()
         for date in xrange(num):
@@ -182,37 +179,9 @@ class APILock(ndb.Model):
         return lock.dates
 
     @classmethod
-    def get(self, calls=1):     # DEPRECTED 1.30g
-        """ To avoid long system locks, works by temporarily reserving the number of calls requested. Later,
-        after determining the actual number available and the number used, we return unused. Based on theory
-        that it is fast to append and remove dates, but slow to determine num dates available. NOTE: after 
-        testing, this may not be true."""
-        t10 = time.time()        # TESTING
-        with self._api_lock:
-            self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
-            if not self._lock:
-                self._lock = self(id='apilock')
-            else:
-                del self._lock.dates[:-500]
-
-            # logging.info('num dates: %s, calls: %s' %(len(self._lock.dates), calls))
-            t11 = time.time()
-            now = datetime.utcnow()         # comment is for testing
-            for x in xrange(calls):
-
-                # now = datetime.utcnow()             # TESTING
-                self._lock.dates.append(now)        # TESTING
-            logging.info('time to append dates loop:            %s' %(time.time()-t11))
-            self._lock.put()
-
-        logging.info('total time apiLock.get, append dates: %s' %(time.time()-t10))  # TESTING
-        return self._lock.dates
-
-    @classmethod
-    def get2(self, data):
+    def get(self, data):
         """ Check to see if there api calls available and return url / list of urls to fetch data from WU."""
 
-        t10 = time.time()        # TESTING
         with self._api_lock:
             self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
             if not self._lock:
@@ -230,21 +199,4 @@ class APILock(ndb.Model):
                 response = create_month_urls(data, self._lock.dates)
                 append_dates_to_lock(self._lock, len(response))
 
-        logging.info('total time apiLock.get, append dates: %s' %(time.time()-t10))  # TESTING
         return response
-    
-    @classmethod
-    def return_dates(self, dates):
-        t0 = time.time()        # TESTING
-        with self._api_lock:
-            t2 = time.time()        # TESTING
-            self._lock = self.get_by_id('apilock', use_cache=False, use_memcache=False)
-            logging.info('nDB time to get apilock, i.e. dates: %s' %(time.time()-t2))
-            t1 = time.time()        # TESTING
-            for date in dates:
-                # logging.info('returning date: %s' %date)
-                self._lock.dates.remove(date)
-            logging.info('time to return dates loop:           %s' %(time.time()-t1))      # TESTING
-            self._lock.put()
-        logging.info('total time to return dates:          %s' %(time.time()-t0))      # TESTING
-        return True

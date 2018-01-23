@@ -54,7 +54,6 @@ def day_api_calls_avail(dates):
             avail = False
             
     return avail
-# def create_url(view, zipcode, options=None):
 def create_url(data):
     view = data['view']
     zipcode = data['zip']
@@ -66,9 +65,6 @@ def create_url(data):
     elif view == 'radar':
         api_call = ''
         k = {      
-            # 'height':       options['height'],
-            # 'width':        options['width'],
-            # 'radius':       options['radius'],
             'height':       data['height'],
             'width':        data['width'],
             'radius':       data['radius'],
@@ -82,9 +78,6 @@ def create_url(data):
         api_calls = api_call.join(['&%s=%s' %(key, k[key]) for key in k.keys()])
         api_calls = api_calls[1:]
     else:   # month
-        # year    = str(options[0])
-        # _mon    = str(options[1]).zfill(2)
-        # day     = str(options[2]).zfill(2)
         year    = str(data['date'][0])
         _mon    = str(data['date'][1]).zfill(2)
         day     = str(data['date'][2]).zfill(2)

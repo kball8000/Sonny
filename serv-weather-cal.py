@@ -65,7 +65,7 @@ def get_weather_underground_data(url, _json=True):
         result = error_obj()
     return result
 
-def conv_py_date(d, _typ): # Keep here
+def conv_py_date(d, _typ):
     """ Converts a python date object to a list or string. """
     _d = [d.year, d.month, d.day, d.hour, d.minute, d.second]
     if _typ == 'str':
@@ -234,11 +234,9 @@ class Basic(webapp2.RequestHandler):
 class GetWeather(webapp2.RequestHandler):
     def post(self):
 
-        info        = json.loads(self.request.body)   # weather obj from page
+        info        = json.loads(self.request.body)     # weather obj from page
         forecast_p  = models.Forecast.get_async(info)
-
-        # This will be a url to get data from Weather Underground.
-        url = models.APILock.get2(info)
+        url         = models.APILock.get(info)         # url for Weather Underground.
 
         if url:
             forecast = forecast_p.get_result()
@@ -262,40 +260,33 @@ class GetRadar(webapp2.RequestHandler):
         # since fetching the radar often takes longer then default 5s.
         urlfetch.set_default_fetch_deadline(15)
 
-        info            = json.loads(self.request.body)
-        
-        radar_p         = models.Radar._get_async(info['id'])
-        # dates           = models.APILock.get()
-        # temp_date       = dates.pop()
-        url = models.APILock.get2(info)
+        info    = json.loads(self.request.body)        
+        radar_p = models.Radar._get_async(info['id'])
+        url     = models.APILock.get(info)     # url for Weather Underground
 
-        # if s_utils.api_calls_avail(dates):
         if url:
             radar = radar_p.get_result()
         
             if not radar:
-                radar       = models.Radar.new_obj(info['id'])
-                radar       = update_radar(radar, info, url)
+                radar   = models.Radar.new_obj(info['id'])
+                radar   = update_radar(radar, info, url)
                 # update_radar(radar, info, url)    # consider replacing line above with this.
 
                 models.Radar.w_put(radar)
             elif not fresh_weather(radar) or radar.error:
-                radar       = update_radar(radar, info, url)
+                radar   = update_radar(radar, info, url)
                 # update_radar(radar, info, url)    # consider replacing line above with this.
                 models.Radar.w_put(radar)
             else:
                 pass
-                # models.APILock.return_dates([temp_date])
             send_radar(self, True, radar)
 
         else:
-            # models.APILock.return_dates([temp_date])
             send_radar(self, False)
 class GetMonth(webapp2.RequestHandler):
     """ Gets historical month data, highs/lows/rainfall... which will save to the datastore indefinitely. """ 
     def post(self):
 
-        # t0 = time.time()                                    # TESTING
         info        = json.loads(self.request.body)     # weather obj from page
         logging.info('%s' %info)
         month                   = s_month.get_month(info)
@@ -303,8 +294,6 @@ class GetMonth(webapp2.RequestHandler):
         if 'cal' in response and 'updated' in response:
             del response['cal']
             del response['updated']
-
-        # logging.info('month request_duration: %s' %round((time.time() - t0), 3))
 
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(response))

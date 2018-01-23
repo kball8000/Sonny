@@ -13,7 +13,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
   // $interval(weather.refreshForecasts, 10*1000);    // comment is for testing
-  $interval(weather.refreshForecasts, 20*1000);       // TESTING
+  // $interval(weather.refreshForecasts, 20*1000);       // TESTING
 
   /* Get the weather data. */
   function loadCityList(r) {

@@ -52,9 +52,6 @@ def create_day_html(day, current_month):
         html += '<br>H<br>L';
     html += '</td>'
         
-        # day['html']         = html
-        # day['html_version'] = HTML_VERSION
-
     return html
 def mark_complete_or_recent(day):
     # Only mark complete if not close to today. WU will report before day is over
@@ -74,7 +71,6 @@ def mark_complete_or_recent(day):
         if 'last_updated' in day:
             del day['last_updated']
     
-    # return day
 def process_day(day, data):
     day['high']                 = data['maxtempi']
     day['low']                  = data['mintempi']
@@ -96,11 +92,6 @@ def process_day(day, data):
     day['heatingdegreedays']    = data['heatingdegreedays']
     day['coolingdegreedays']    = data['coolingdegreedays']
 
-    # day['updated']              = True
-
-    # day = mark_complete_or_recent(day)    
-    
-    # return day
 def create_month(info): 
     info['cal']                 = create_cal(info['year'], info['month'])
     info['complete']            = False
@@ -177,14 +168,8 @@ def update_month(month, urls):
         urlfetch.make_fetch_call(rpc, url)
         rpcs.append(rpc)
 
-    # if len(urls):                                           # TESTING
-        # logging.info('Requests sent, now we wait...')       # TESTING
-
     for rpc in rpcs:
         rpc.wait()
-    
-    # if len(urls):                                           # TESTING
-        # logging.info('Requests from WU COMPLETE')
 
     # SHOULD MOVE EVERYTHING BELOW AND CAL, OLD_VERSION VARS TO A PROCESS MONTH FUNCTION.
 
@@ -255,57 +240,38 @@ def update_end_month(month, end):
     if current_row[0]['date'] == non_current_row[0]['date']:
         for i, d in enumerate(current_row):
             if d['updated']:
-                # logging.info('day %s is updated: : %s' %(d['date'], d['updated']))
                 non_current_row[i]  = d.copy()
                 obj.info['updated'] = True
 
     return obj
 def save_month(_month):
-    # Assume these next 2 statements and verify in next steps.
-    # _month.info['complete'] = True
     cal = _month.info['cal']
 
     set_month_complete(_month.info)
     set_totals(_month.info)
     
     if _month.info['updated']:
-        # logging.info('savemonth, month %s %s is updated?: %s' %(_month.info['month'], _month.info['year'], _month.info['updated']))
-        # _month = clear_day_updates(_month)
         clear_day_updates(_month)
         _month.info['updated'] = False
         models.Forecast.put(_month)
 def build_html_table(_month):
-    # HTML_VERSION = '0.1r'
     old_version = ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION)
 
-    # t0 = time.time()
-
-    # if ('html_version' not in _month.info or _month.info['html_version'] != HTML_VERSION ):
     if (old_version or _month.info['updated']):
-    # I AM CONSIDERING GETTING RID OF ANY CHECKS AND JUST REBUILING EVERY TIME, DOES NOT TAKE THAT LONG
-    # AND SAVES STORING THE DAY['HTML'] INDEFINITELY. EVENTUALLY REMOVE THIS IF TRUE
-    # if True:
         cal             = _month.info['cal']
-        # current_month   = int(_month.info['id'][-2:])
         current_month   = int(_month.info['month'])
         html            = ""
         headers         = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
         week_html       = ''
 
         html += "<table class='table'>\n  <tr>\n    "
-        for h in headers:
-            html += '<th>'+ h +'</th> '
+        for header in headers:
+            html += '<th>'+ header +'</th> '
         html += '\n  </tr>\n'
-
-        # TODO FIX THE WAY I HANDLE DAY HTML
-        # NOT SURE WHY I AM STORING HTML IN DAY AND IN MONTH, JUST PROCESS IT EVERY TIME???
 
         for week in cal:
             week_html = '  <tr>'
             for day in week:
-                # day = create_day_html(day)
-                # create_day_html(day)
-                # week_html += '\n' + day['html']
                 week_html += '\n' + create_day_html(day, current_month)
             html += week_html + '\n' + '  </tr>' + '\n'
 
@@ -314,10 +280,6 @@ def build_html_table(_month):
         _month.info['html']         = html
         _month.info['html_version'] = HTML_VERSION
 
-        # t1 = round(time.time()-t0, 5)
-        # logging.info('Updating html table for month %s took %ss, ' %(_month.info['month'], t1))
-
-    # return _month 
 def get_month(info):
     info['id'] = create_month_id(info['zip'], info['year'], info['month'])
     months = []
@@ -328,7 +290,7 @@ def get_month(info):
         month = create_month(info)
 
     if not month.info['complete']:
-        urls = models.APILock.get2(month.info)
+        urls = models.APILock.get(month.info)
         months.append(update_month(month, urls))
         months.append(update_end_month(month, end=False))
         months.append(update_end_month(month, end=True))
