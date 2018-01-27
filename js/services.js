@@ -513,7 +513,7 @@ var app = angular.module('weatherServices', [])
     })
   }
 })
-.service('autocomp', function(wData, wDB, $http) {
+.service('autocomp', function(wData, wDB, $http, $sce) {
   /** 
    * Created this setHome flag concept so I could refresh weather using selected city
    * which runs after the checkbox function. Checkbox function will alter cities list causing
@@ -528,16 +528,31 @@ var app = angular.module('weatherServices', [])
     wData.setHome.flag = false;
     wDB._put('savedCities', this.savedCities);
   }  
+  function go(d) {
+    console.log('going from wu:', d);
+  }
   function wuAutocompleteRequest(query) {
-    var url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&c=US&query=' + query;
-    
-    return $http.jsonp(url).then(r => {
+    // whitelisting available with $sceDelegateProvider.resourceUrlWhitelist instead of individual trustedUrl.
+    let url = 'https://autocomplete.wunderground.com/aq',
+        trustedUrl = $sce.trustAsResourceUrl(url),
+        config = {
+          jsonpCallbackParam: 'cb',
+          params: {
+            c:        'US',
+            format:   'JSON',
+            query:    query          
+          }      
+        }
+
+    return $http.jsonp(trustedUrl, config).then(r => {
       return r.data.RESULTS.map( m => {
         var name = isNaN(m.name) ? m.name : m.name.substr(8);
         return {
           zip: m.zmw.substr(0,5),
           text: name
         }
+      }, e => {
+        console.log('WU autocomplete error:', e);
       })
       .filter( city => {
         let lowerCaseQuery  = angular.lowercase(query),

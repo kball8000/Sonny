@@ -3,10 +3,17 @@
 // 2016 
 
 var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSanitize'])
-.config(function($mdGestureProvider) {
+.config(function($mdGestureProvider, $sceDelegateProvider) {
   $mdGestureProvider.skipClickHijack();
+  // $sceDelegateProvider.resourceUrlWhitelist([
+  //   // Allow same origin resource loads.
+  //   'self',
+  //   // Allow loading from our assets domain.  Notice the difference between * and **.
+  //   'https://autocomplete.wunderground.com/**'
+  // ]);
+
 })
-.controller('mainCtrl', function($scope, $interval, $location, $http, wData, wDB, wLog, weather, autocomp) {
+.controller('mainCtrl', function($scope, $interval, $location, $http, $sce, wData, wDB, wLog, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
   $scope.main         = wData;
   $scope.citySearch   = autocomp.citySearch;
@@ -14,6 +21,76 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
 
   $interval(weather.refreshForecasts, 10*1000);    // comment is for testing
   // $interval(weather.refreshForecasts, 20*1000);       // TESTING
+
+
+  function goJson(data) {
+    console.log('running goJson!', data);
+  }
+  let goJson2 = function(data) {
+    console.log('running goJson2!:', data);
+  }
+  let goJson3 = function(data) {
+    console.log('running goJson3!:', data);
+  }
+  $scope.goJson4 = function(data) {
+    console.log('running goJson4!:', data);
+  }
+  TOMMY = function(d) {
+  // let TOMMY = function(d) {
+    console.log('TOMMY:', d);
+  }
+  $scope.testWU = function(query) {
+    // var url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&c=US&format=JSON&query=' + query;
+    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON&query=' + query;
+    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON&query='+query;
+    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON';
+    // var url = 'https://autocomplete.wunderground.com/aq?c=US&format=JSON';
+    let url = 'https://autocomplete.wunderground.com/aq';
+    // let url = 'https://autocomplete.wunderground.com/aq';
+    // let url = 'https://autocomplete.wunderground.com/aq?c=US&format=JSON&query=' + query;
+    // let url = 'https://autocomplete.wunderground.com/aq?cb=goJson4&c=US&query=' + query;
+    // var url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&c=US&query=' + query;
+    // let config = {JSON_CALLBACK:'go'};
+    // let config = {query:'cin'};
+    let trustedUrl = $sce.trustAsResourceUrl(url);
+
+    // $http.defaults.jsonpCallbackParam = 'JSON_CALLBACK';
+    // $http.defaults.jsonpCallbackParam = 'TOMMYY';
+    $http.defaults.jsonpCallbackParam = 'cb'; // WRONG ON PUROSE???
+    // $http.defaults.jsonpCallbackParam = 'goJson3';
+    // $http.defaults.jsonpCallbackParam = 'goJson4';
+
+
+    let params = {
+      c: 'US',
+      format: 'JSON',
+      // cb: 'TOMMY',
+      // jsonpCallbackParam: 'TOMMY',
+      query: 'gre'
+    };
+
+    
+    console.log('url:', url);
+    console.log('trustedUrl:', trustedUrl);
+    // $http.jsonp(url).then( r => {
+    // $http.jsonp(trustedUrl).then( r => {
+    // $http.jsonp(trustedUrl, {jsonpCallbackParam: 'cb'}).then ( r => {
+    // $http.jsonp(trustedUrl, {params: {query:query, cb: 'TOMMY'}}).then ( r => {
+    // $http.jsonp(url, {params: params}).then ( r => {
+    $http.jsonp(trustedUrl, {params: params}).then ( r => {
+    // $http.jsonp(trustedUrl, {params: params}).then( r => {
+        console.log('r:', r.data.RESULTS[0]);
+      // console.dir(r);
+    }, e => {
+      console.log('ERROR:', e);
+    })
+    // $http.get(url).then( r => {
+    // $http.jsonp(url).then( r => {
+
+    //   console.log('r:', r);
+    // });
+  }
+
 
   /* Get the weather data. */
   function loadCityList(r) {
@@ -132,6 +209,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   $scope.textChg = function(query) {
     /* If 5 digit number is input, assume zip code and automatically send off request for weather data. */
     
+    console.log('running test change will check location:');
+
     if( query.length === 5 && !isNaN(query) && query != wData.info.zip ) {
       let newZip = query,
           url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&query=' + newZip;
