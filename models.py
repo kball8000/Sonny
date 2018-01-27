@@ -62,8 +62,9 @@ def is_recent(day):
 
 def create_month_urls(data, dates):
     # Calls are reserved or left alone so there are still some available for a current or tenday request.
-    calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
-    # calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
+    # calls_reserved      = 8         # TESTING FOR SUPER LONG LOCAL DELAY.
+    # calls_reserved      = 7         # TESTING FOR SUPER LONG LOCAL DELAY.
+    calls_reserved      = 2       # COMMENTING THIS LINE IS TESTING.
 
     urls                = []
 

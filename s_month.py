@@ -154,12 +154,13 @@ def update_month(month, urls):
     cal             = month.info['cal']
 
     def handle_rpc(rpc):
-        r = rpc.get_result()
         try:
+            r = rpc.get_result()
             logging.info('Handling RPC in cb: r {}'.format(r))
             results.append(json.loads(r.content))
-        except:
-            logging.info('failed to load history on date, %s' %r)
+        except Exception as inst:
+            logging.info('month error: %s' %inst)
+
 
     for url in urls:
         logging.info('Req2Wu url: %s' %(url[:5] + '...' + url[50:]))

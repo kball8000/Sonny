@@ -40,57 +40,25 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
     console.log('TOMMY:', d);
   }
   $scope.testWU = function(query) {
-    // var url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&c=US&format=JSON&query=' + query;
-    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON&query=' + query;
-    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON&query='+query;
-    // var url = 'https://autocomplete.wunderground.com/aq?cb=TOMMY&c=US&format=JSON';
-    // var url = 'https://autocomplete.wunderground.com/aq?c=US&format=JSON';
     let url = 'https://autocomplete.wunderground.com/aq';
-    // let url = 'https://autocomplete.wunderground.com/aq';
-    // let url = 'https://autocomplete.wunderground.com/aq?c=US&format=JSON&query=' + query;
-    // let url = 'https://autocomplete.wunderground.com/aq?cb=goJson4&c=US&query=' + query;
-    // var url = 'https://autocomplete.wunderground.com/aq?cb=JSON_CALLBACK&c=US&query=' + query;
-    // let config = {JSON_CALLBACK:'go'};
-    // let config = {query:'cin'};
     let trustedUrl = $sce.trustAsResourceUrl(url);
 
-    // $http.defaults.jsonpCallbackParam = 'JSON_CALLBACK';
-    // $http.defaults.jsonpCallbackParam = 'TOMMYY';
-    $http.defaults.jsonpCallbackParam = 'cb'; // WRONG ON PUROSE???
-    // $http.defaults.jsonpCallbackParam = 'goJson3';
-    // $http.defaults.jsonpCallbackParam = 'goJson4';
-
+    $http.defaults.jsonpCallbackParam = 'cb';
 
     let params = {
       c: 'US',
       format: 'JSON',
-      // cb: 'TOMMY',
-      // jsonpCallbackParam: 'TOMMY',
       query: 'gre'
     };
-
     
     console.log('url:', url);
     console.log('trustedUrl:', trustedUrl);
-    // $http.jsonp(url).then( r => {
-    // $http.jsonp(trustedUrl).then( r => {
-    // $http.jsonp(trustedUrl, {jsonpCallbackParam: 'cb'}).then ( r => {
-    // $http.jsonp(trustedUrl, {params: {query:query, cb: 'TOMMY'}}).then ( r => {
-    // $http.jsonp(url, {params: params}).then ( r => {
     $http.jsonp(trustedUrl, {params: params}).then ( r => {
-    // $http.jsonp(trustedUrl, {params: params}).then( r => {
         console.log('r:', r.data.RESULTS[0]);
-      // console.dir(r);
     }, e => {
       console.log('ERROR:', e);
     })
-    // $http.get(url).then( r => {
-    // $http.jsonp(url).then( r => {
-
-    //   console.log('r:', r);
-    // });
   }
-
 
   /* Get the weather data. */
   function loadCityList(r) {
