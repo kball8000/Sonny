@@ -98,6 +98,10 @@
       </md-card-content>
     </md-card>
 
+    <p>
+      Current {{ o.info.current.weather.observation_time }}
+    </p>
+
     <md-list ng-cloak ng-show='o.info.current.weather.alerts.length'>
       <md-subheader style="margin:-12px 0px -18px 0px;"><h4>Weather Alerts</h4></md-subheader>
       <md-list-item ng-repeat="alert in o.info.current.weather.alerts">
@@ -109,10 +113,6 @@
         </div>
       </md-list-item>
     </md-list>
-
-    <p>
-        Current {{ o.info.current.weather.observation_time }}
-    </p>
 
   </div>
 </div>

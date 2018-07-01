@@ -51,7 +51,8 @@ def get_weather_underground_data(url, _json=True):
             }
         }
     try:
-        logging.info('get from wu: %s' %(url[:5] + '...' + url[50:]))
+        logging.info('get-wu: %s' %(url[:5] + '...' + url[50:]))
+        # logging.info('url: %s' %url)
         response = urlfetch.fetch(url)
 
         if response.status_code != 200:
@@ -80,6 +81,14 @@ def trim_month(d):
     li[3] = li[3][:3]
     li[0] = li[0].lower()   # lowercase the word 'Last'
     return ' '.join(li)
+def set_zip(response, data):    # TESTING
+    # Currently not using Feb 2018 unless I keep getting zip errors.
+    _zip = '00000'
+    if 'zip' in data:
+        _zip = data['zip']
+    elif 'zip' in response:
+        _zip = response['zip']
+    response['zip'] = _zip
 
 def process_current(raw):
     """This includes both current conditions and hourly forecast"""
@@ -95,6 +104,11 @@ def process_current(raw):
     d['winddir']    = c['wind_dir']
     d['icon_url']   = c['icon_url'].replace('http://', 'https://')
     d['observation_time']   = trim_month(c['observation_time'])
+
+    # e = c['display_location']
+    # _zip    = e['zip']
+    # text    = e['city'] + ', ' + e['state_name']
+    # logging.info('zip: %s, city_text: %s' %(_zip, text))
 
     f = raw['forecast']['simpleforecast']['forecastday']
     d['high']           = f[0]['high']['fahrenheit']
@@ -147,7 +161,13 @@ def process_current(raw):
         _h['icon_url']      = t['icon_url'].replace('http://', 'https://')
         _h['wind']          = str(t['wspd']['english']) + ' ' + t['wdir']['dir']
         h.append(_h)
-    return {'current': d, 'hourly': h}
+
+    _zip = raw['location']['zip']
+    text = raw['location']['city'] + ', ' + raw['location']['state']
+
+    logging.info('Cur/Hr zip: %s, city_text: %s' %(_zip, text))    # TESTING
+
+    return {'current': d, 'hourly': h, 'zip': _zip, 'text': text}
 def process_tenday(raw):
     
     tenday = []
@@ -171,7 +191,13 @@ def process_tenday(raw):
         _d['detail_am'] = detail[2*i]['fcttext']
         _d['detail_pm'] = detail[2*i+1]['fcttext']
 
-    return {'tenday': tenday}
+    # logging.info('zip: %s' %raw)
+    _zip = raw['location']['zip']
+    text = raw['location']['city'] + ', ' + raw['location']['state']
+
+    logging.info('Tenday zip: %s, city_text: %s' %(_zip, text))    # TESTING
+
+    return {'tenday': tenday, 'zip': _zip, 'text': text}
 
 def update_forecast(obj, url):
     """For current, hourly, tenday and radar 
@@ -201,6 +227,32 @@ def update_forecast(obj, url):
             obj.info['error'] = 'unknown error getting data from wu'
 
     return obj
+def update_forecast2(info, url):     # TESTING
+    """For current, hourly, tenday and radar 
+    Input: Data is datastore object. 
+    Handles API lock as well as getting updated data from weather underground.
+    Output: data.weather which is Javascript object."""
+    
+    view        = info['view']
+    func        = {
+        'current':  process_current,
+        'hourly':   process_current,
+        'tenday':   process_tenday
+    }
+
+    raw = get_weather_underground_data(url)
+
+    if 'error' not in raw['response']:
+        result                = func[view](raw)
+        # result['lastUpdated'] = conv_py_date(datetime.utcnow(), 'li')
+        logging.info('result.keys(): %s' %result.keys())
+    else:
+        try:
+            result = {'error': raw['response']['error']['description']}
+        except:
+            result = {'error': 'unknown error getting data from wu'}
+
+    return result
 
 def update_radar(radar, info, url):
     radar.error = ''
@@ -233,6 +285,8 @@ class Basic(webapp2.RequestHandler):
         self.response.write(page.read())
 class GetWeather(webapp2.RequestHandler):
     def post(self):
+        
+        t0 = time.time()
 
         info        = json.loads(self.request.body)     # weather obj from page
         forecast_p  = models.Forecast.get_async(info)
@@ -253,8 +307,34 @@ class GetWeather(webapp2.RequestHandler):
         else:
             _response = {'error': 'no api keys available'}
         
+        logging.info('time getWeather1: %s' %(time.time()-t0))
         self.response.headers['Content-Type'] = 'text/javascript'
         self.response.write(json.dumps(_response))
+class GetWeather2(webapp2.RequestHandler):
+    def post(self):
+
+        t0 = time.time()
+        info        = json.loads(self.request.body)     # weather obj from page
+        logging.info('info: %s' %info)
+        url         = models.APILock.get(info)         # url for Weather Underground.
+        views       = ['current', 'hourly', 'tenday']
+
+        if url:
+            response = update_forecast2(info, url)
+            for view in views:
+                if view in response:
+                    logging.info('process view: %s' %view)
+
+        else:
+            response = {'error': 'no api keys available'}
+
+        # response['zip'] could be unavailable, look at alternatives to next line.
+        response['id']      = 'weather-' + response['zip']
+        response['request'] = info['request']
+        
+        logging.info('time getWeather2: %s' %(time.time()-t0))
+        self.response.headers['Content-Type'] = 'text/javascript'
+        self.response.write(json.dumps(response))
 class GetRadar(webapp2.RequestHandler):
     def post(self):
         # since fetching the radar often takes longer then default 5s.
@@ -324,6 +404,20 @@ class GetMonthObj(webapp2.RequestHandler):
             self.response.write(json.dumps(obj.info))
         else:
             self.response.write(json.dumps({'msg':'nothing retrieved from datastore'}))
+class GetGeoLocation(webapp2.RequestHandler):
+    def post(self):
+
+        info        = json.loads(self.request.body)     # weather obj from page
+        url         = s_utils.create_url(info, use_zip=False)
+
+        logging.info('getting data for geolocation')
+
+        response    = get_weather_underground_data(url)
+        response['timestamp'] = info['timestamp']
+        
+        self.response.headers['Content-Type'] = 'text/javascript'
+        self.response.write(json.dumps(response))
+
 
 # NOTE when testing functions. Get requests get intercepted by web app, so they only run once.
 # Easiest fix is to run Post requests.
@@ -354,9 +448,11 @@ app = webapp2.WSGIApplication([
     ('/hourly', Basic),
     ('/month', Basic),
     ('/tenday', Basic),
-    ('/radar', Basic),    
-    ('/getweather', GetWeather),
+    ('/radar', Basic),
+    # ('/getweather', GetWeather),
+    ('/getweather', GetWeather2),
     ('/getradar', GetRadar),
+    ('/getgeolocation', GetGeoLocation),
     
     # TESTING
     ('/addtoqueue', AddToQueue),

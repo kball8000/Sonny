@@ -55,15 +55,16 @@ def day_api_calls_avail(dates):
             
     return avail
 def create_url(data):
-    view = data['view']
-    zipcode = data['zip']
-    if view == 'current':
-        p=['conditions', 'forecast', 'alerts', 'astronomy', 'almanac', 'hourly']
-        api_calls = '/'.join(p)
+    view        = data['view']
+    location    = data['request']['val']
+
+    if view == 'current' or view == 'hourly':
+        features    = ['conditions', 'forecast', 'alerts', 'astronomy', 'almanac', 'hourly', 'geolookup']
+        api_calls   = '/'.join(features)
     elif view == 'tenday':
-        api_calls = 'forecast10day'
+        features    = ['forecast10day', 'geolookup']
+        api_calls   = '/'.join(features)
     elif view == 'radar':
-        api_call = ''
         k = {      
             'height':       data['height'],
             'width':        data['width'],
@@ -75,8 +76,9 @@ def create_url(data):
             'num' :         '5',
             'delay':        '50'
         }
-        api_calls = api_call.join(['&%s=%s' %(key, k[key]) for key in k.keys()])
-        api_calls = api_calls[1:]
+        api_calls = ''.join(['&%s=%s' %(key, k[key]) for key in k])
+        # api_calls = ''.join(['&%s=%s' %(key, k[key]) for key in k.keys()])
+        api_calls = api_calls[1:]   # Remove initial ampersand sign.
     else:   # month
         year    = str(data['date'][0])
         _mon    = str(data['date'][1]).zfill(2)
@@ -84,10 +86,9 @@ def create_url(data):
         api_calls = 'history_' + year + _mon + day
 
     base = 'https://api.wunderground.com/api/' + keys.key + '/'
-    url = {
-        'current': base + api_calls + '/q/' + zipcode + '.json',
-        'tenday' : base + api_calls + '/q/' + zipcode + '.json',
-        'month'  : base + api_calls + '/q/' + zipcode + '.json',
-        'radar'  : base + 'animatedradar/q/' + zipcode + '.gif?' + api_calls
-    }
-    return url[view]
+    if view == 'radar':
+        url = base + 'animatedradar/q/' + location + '.gif?' + api_calls
+    else:
+        url = base + api_calls + '/q/'  + location + '.json'
+
+    return url

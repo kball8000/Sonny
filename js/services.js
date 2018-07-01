@@ -34,6 +34,9 @@ var app = angular.module('weatherServices', [])
    */
   function getLimit(view) {
     let obj = {
+      // current:            2*60*1000,   // cache
+      // hourly:             2*60*1000,   // cache
+      // tenday:           2*60*1000,   // cache
       current:            15*60*1000,   // cache
       hourly:             15*60*1000,   // cache
       tenday:           6*60*60*1000,   // cache
@@ -209,7 +212,7 @@ var app = angular.module('weatherServices', [])
       id:           id,
       img:          null,
       imgUrl:       '',
-      lastChecked:  0,
+      // lastChecked:  0,
       lastUpdated:  0,    // Store timestamps as seconds since epoch, i.e. 1970.
       errorMsg:     '',
       expiredMsg:   '',
@@ -234,7 +237,7 @@ var app = angular.module('weatherServices', [])
   data.setZoom            = function(z) {
     // Left out limit checks since zoom button disables on limits.
     let radarUser  = data.info.radarUser;
-    
+    let oldZoom = radarUser.zoom;           // TESTING
     if(z){  // zoom in 
       if(radarUser.zoom <= 100) {
         radarUser.zoom -= 50;
@@ -248,6 +251,7 @@ var app = angular.module('weatherServices', [])
         radarUser.zoom += 100;
       }
     }
+    console.log('clicked zoom, prevzoom:', oldZoom, ', newzoom:', radarUser.zoom);
     // TESTING
     // NEEDS WORK, THIS IS UBER HACK AND I DON'T LIKE IT.
     radarUser.lastUpdated = 0;    // Forces app to look for new image.
@@ -316,7 +320,7 @@ var app = angular.module('weatherServices', [])
       chgSpinner();
       newSpinnerId = setSpinnerId(Date.now());
       // newSpinnerId = setSpinnerId(Math.ceil(Math.random()*1000));
-      $timeout(data.setSpinner, 2000, true, view, false, newSpinnerId);
+      $timeout(data.setSpinner, 2500, true, view, false, newSpinnerId);
     } else if (id === data.info[view].spinnerId) {
       // turn spinner off only if this returned data request / timeout actually turned it on.
       chgSpinner();
@@ -513,7 +517,7 @@ var app = angular.module('weatherServices', [])
     })
   }
 })
-.service('autocomp', function(wData, wDB, $http, $sce) {
+.service('autocomp', function(wData, wDB, $http, $q, $sce) {
   /** 
    * Created this setHome flag concept so I could refresh weather using selected city
    * which runs after the checkbox function. Checkbox function will alter cities list causing
@@ -576,7 +580,28 @@ var app = angular.module('weatherServices', [])
     wData.setHome.city = city;
   }
   this.citySearch       = function(query) {
-    return query ? wuAutocompleteRequest(query) : _this.savedCities;
+    let cityList = _this.savedCities.slice();
+    console.log('length savedCities:', cityList.length);
+    let deferred = $q.defer();
+
+    console.log('geo:');
+    navigator.geolocation.getCurrentPosition( position => {
+      if (cityList[1].text !== 'Current Location') {
+        console.log('will ADD current position to list:');
+        cityList.splice(1, 0, {zip: '', text: 'Current Location'});
+      }
+      deferred.resolve(cityList);
+    }, error => {
+      if (error.code === error.PERMISSION_DENIED) {
+        console.log('will NOT be adding current location to list!');
+      }
+      deferred.resolve(cityList);
+    })
+    console.log('does this run before "will ADD... or will NOT be..."');
+
+
+    return query ? wuAutocompleteRequest(query) : deferred.promise;
+    // return query ? wuAutocompleteRequest(query) : cityList;
   }
   this.addCity          = function(newCity){
     /**
@@ -604,6 +629,7 @@ var app = angular.module('weatherServices', [])
     
     $http.get(url).then(r => {
       console.log('zip back from WU GET Request ', r.data.location.zip );
+      console.log('data:', r.data);
     })
 
   }
@@ -614,10 +640,14 @@ var app = angular.module('weatherServices', [])
      * For requesting data, at the moment only month data, which is outside of what is displayed 
      * to the user, i.e. prefetching data.
      */
-    let url   = window.location.origin + relativeUrl,
+    let url   = window.location.origin + '/' + relativeUrl,
         data  = Object.assign({}, obj);
 
-    data.month += 1; // Convert for python, i.e. Jan = 1.
+    if ('month' in data){
+      data.month += 1; // Convert for python, i.e. Jan = 1.
+    }
+
+    data.request = wData.latestServerRequest;
 
     return $http.post(url, data);
   }
@@ -629,8 +659,9 @@ var app = angular.module('weatherServices', [])
     let url     = window.location.origin, 
         config  = {},
         data    = {
-            view: view,
-            zip: wData.info.zip
+          request:  {type: 'zip', val: wData.info.zip},
+          view:     view,
+          zip:      wData.info.zip
         };
     if (view === 'radar'){
       data.id             = wData.info.radarUser.id;
@@ -659,10 +690,10 @@ var app = angular.module('weatherServices', [])
 
     obj.img         = r.data;
     obj.imgUrl      = URL.createObjectURL(obj.img);
-
-    obj.lastChecked = lastServReq;    // may be used for spinner, not currently.
-    obj.lastServReq = lastServReq;    // used to avoid too many server requests.
     obj.lastUpdated = date;
+
+    // obj.lastChecked = lastServReq;    // may be used for spinner, not currently.
+    // obj.lastServReq = lastServReq;    // used to avoid too many server requests.
     
     return obj;
   }
@@ -671,15 +702,20 @@ var app = angular.module('weatherServices', [])
      * Request a radar image from server with a 30s time limit to wait for server response.
      */
     
-    let lastServReq = wData.info.radar.lastServReq || 0;
+    // let lastServReq = wData.info.radar.lastServReq || 0;
 
-    if (Date.now() - lastServReq > 30*1000) {
+    let lastServReq = wData.radarRequestTS[wData.info.radarUser.id];
+    console.log('t0:', lastServReq);
+
+    // if (Date.now() - lastServReq > 30*1000) {
+    if (!lastServReq || (Date.now() - lastServReq > 30*1000) ) {
       let requestedId = wData.info.radarUser.id,
           requestTS   = wData.setRadarTS(requestedId);
-
+      
       console.log('sending radar request for id: ', requestedId, ', ts: ', requestTS);
+      console.log('radarTS:', wData.radarRequestTS);
           
-      wData.info.radar.lastServReq = Date.now();
+      // wData.info.radar.lastServReq = Date.now();    // Seems unneeded.
       
       httpReq('radar').then(r => {
         try {
@@ -729,12 +765,6 @@ var app = angular.module('weatherServices', [])
     /**
      * This refreshes Now / Hourly / Tenday tabs.
      */
-    function updateExpiredMsg() {
-      if (view !== 'month') {
-        wData.updateExpiredMsg(view);
-      }
-    }
-
     let expiredData     = wDates.isExpired(wData.info[view].lastUpdated, view),
         recentCheck     = wDates.recentCheck(wData.info[view].lastChecked, view),
         validTempRegex  = /^-?\d+/,
@@ -764,12 +794,12 @@ var app = angular.module('weatherServices', [])
           wLog.log('error', 'httpReq ' + view + ' success, but catch on updatingView, error: ' + e);
         }
 
-        updateExpiredMsg();
+        wData.updateExpiredMsg(view);
         wData.setSpinner(view, false, spinnerId);
 
       }, e => {
         wLog.log('warning', 'Did not get ' + view + ' data from server, online status: ' + navigator.onLine + ', error: ' + e);
-        updateExpiredMsg();
+        wData.updateExpiredMsg(view);
         wData.setSpinner(view, false, spinnerId);
       })
     }
@@ -842,7 +872,7 @@ var app = angular.module('weatherServices', [])
       }
 
       if (monthToUpdate) {
-        httpReqObj(monthToUpdate, '/getmonth').then(r => {
+        httpReqObj(monthToUpdate, 'getmonth').then(r => {
           try {
             r.data.lastSuccessfulCheck = Date.now();
             if (r.data.id === wData.monthUser.id()) {
@@ -869,6 +899,11 @@ var app = angular.module('weatherServices', [])
     let expiredData = wDates.isExpired(wData.info.radar.lastUpdated, 'radar'),
         sameZoom    = wData.info.radarUser.zoom === wData.info.radar.zoom;
 
+    /** SCENERIOS:
+     *  -setInterval  => same zoom, but data could be expired
+     *  -user zoom    => !same zoom
+     */
+
     console.log('refreshRadar, checking expired on current object: ', expiredData, ', sameZoom: ', sameZoom);
     if (!sameZoom ) {
       console.log('refreshRadar, !sameZoom, getting from wDB');
@@ -876,7 +911,7 @@ var app = angular.module('weatherServices', [])
         try {
 
           // WORKING HERE / TESTING. TRY TO FIGURE OUT HOW TO TEST IF URL IS STILL OK BEFORE CREATING A NEW URL.
-
+          console.log('r.value:', r.value);
           r.value.imgUrl    = URL.createObjectURL(r.value.img);
           console.log('image url for wDB image', r.value.imgUrl); 
           wData.info.radar  = r.value;
@@ -909,6 +944,7 @@ var app = angular.module('weatherServices', [])
      */ 
 
     let view  = wData.setRequestView();
+    wData.latestServerRequest = {type: 'zip', val: wData.info.zip};
     
     if(view === 'tenday'){
       refreshView('tenday');    // generally faster than current, so no timeout reqd.
@@ -940,5 +976,81 @@ var app = angular.module('weatherServices', [])
     }
 
     wDB.cleanupCache();
+  }
+  this.getLocation = function(lat, lon) {
+    let view    = wData.setRequestView(),
+        val     = lat.toString() + ',' + lon.toString(),
+        request = {type: 'geo', val: val}
+
+    wData.latestServerRequest   = request;
+
+    let data = {
+      lat:        lat,
+      lon:        lon,
+      request:    request,
+      view:       view
+    }
+    
+    httpReqObj(data, 'getweather').then( r => {
+      console.log('server getgeolocation response:', r);
+      let views = ['current', 'hourly', 'tenday'],
+          validTempRegex  = /^-?\d+/;
+
+      function processCurrent(data) {
+        validTempRegex.test(data.current.temp)    ? updateViewData('current', data) : 0;
+        validTempRegex.test(data.hourly[0].temp)  ? updateViewData('hourly', data) : 0;
+      }
+      function processTenday(data){
+        validTempRegex.test(data.tenday[0].high)  ? updateViewData('tenday', data) : 0;
+      }
+      function correctZip(data){
+        let newCity = {zip: data.zip, text: data.text},
+            id  = 'weather-' + data.zip;
+        for (let city of autocomp.savedCities) {
+          if (city.text == data.text) {
+            newCity = Object.assign({}, city);
+            id      = 'weather-' + city.zip;
+          }
+        }
+        console.log('will correct zip from', oldZip, 'to', newZip);
+
+        /**
+         * MOVE THIS DOWN BELOW, DOESN'T BELONG IN CORRECT ZIP, BUT ALSO DOESN'T MAKE MUCH SENSE
+         * AT THE MOMENT.
+         */
+
+        if (Object.keys(newCity).length) {
+          wDB._get(id).then(r => {
+            if (!r) {
+              obj = wData.createWeatherObj(newCity)
+            } else {
+              console.log('I need to setweatherobj with new data');
+            }
+          })
+        } else {
+          obj = wData.createWeatherObj(newCity)
+        }
+
+      }
+
+      /**
+       * WORKING HERE. WORK ON CORRECT ZIP AND ACTUALLY SET CURRENT CITY TO IT, OTHERWISE START 
+       * NEW WEATHER OBJECT. ???
+       */
+
+
+      if (r.data.request.val === wData.latestServerRequest.val) {
+        correctZip(r.data);
+        if ('current' in r.data) {
+          processCurrent(r.data);
+        } else if ('tenday' in r) {
+          processCurrent(r.data);
+        }
+      }
+
+
+
+    })
+
   }
 });

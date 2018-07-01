@@ -78,7 +78,8 @@
                            md-min-length='0'
                            md-menu-class="acFade"
                            tabindex='1'
-                           placeholder="Enter zip code or city">
+                           placeholder="Enter zip code or city"
+                           ng-click="testGeoInput()">
             <md-item-template>
                 <md-icon md-font-icon="location_on" ng-show='!$index' style='color:#428bca;'
                 aria-label="current location">location_on</md-icon>
@@ -106,7 +107,7 @@
         <div ng-view></div>
 
         <p id='version' ng-cloak>
-          Version 1.30l - {{main.info.location}} - {{main.info.zip}}
+          Version 1.30m - {{main.info.location}} - {{main.info.zip}}
         </p>
         <ul style='list-style-type:none;'>
           <li ng-repeat='t in main.requestDurations track by $index'>{{t}}</li>
@@ -114,10 +115,11 @@
         
         <!-- TESTING -->
         <button ng-click='logData()'>info</button>
-        <button ng-click='downloadWeather()'>downloadWeather</button>
-        <button ng-click='getMonthObj()'>GetMonth</button>
+        <!-- <button ng-click='downloadWeather()'>downloadWeather</button> -->
+        <!-- <button ng-click='getMonthObj()'>GetMonth</button> -->
         <button ng-click='getDates()'>Dates</button>
-        <button ng-click='testWU("gre")'>TestWU</button>
+        <!-- <button ng-click='testWU("gre")'>TestWU</button> -->
+        <button ng-click='getWeather()'>getWeather</button>
       </div>
     </div>
   </body>

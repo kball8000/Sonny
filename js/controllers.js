@@ -3,15 +3,8 @@
 // 2016 
 
 var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSanitize'])
-.config(function($mdGestureProvider, $sceDelegateProvider) {
+.config(function($mdGestureProvider) {
   $mdGestureProvider.skipClickHijack();
-  // $sceDelegateProvider.resourceUrlWhitelist([
-  //   // Allow same origin resource loads.
-  //   'self',
-  //   // Allow loading from our assets domain.  Notice the difference between * and **.
-  //   'https://autocomplete.wunderground.com/**'
-  // ]);
-
 })
 .controller('mainCtrl', function($scope, $interval, $location, $http, $sce, wData, wDB, wLog, weather, autocomp) {
   $scope.$location    = $location;    // For Navbar links
@@ -19,46 +12,8 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
   $scope.citySearch   = autocomp.citySearch;
   $scope.setHomeFlag  = autocomp.setHomeFlag;
 
-  $interval(weather.refreshForecasts, 10*1000);    // comment is for testing
-  // $interval(weather.refreshForecasts, 20*1000);       // TESTING
-
-
-  function goJson(data) {
-    console.log('running goJson!', data);
-  }
-  let goJson2 = function(data) {
-    console.log('running goJson2!:', data);
-  }
-  let goJson3 = function(data) {
-    console.log('running goJson3!:', data);
-  }
-  $scope.goJson4 = function(data) {
-    console.log('running goJson4!:', data);
-  }
-  TOMMY = function(d) {
-  // let TOMMY = function(d) {
-    console.log('TOMMY:', d);
-  }
-  $scope.testWU = function(query) {
-    let url = 'https://autocomplete.wunderground.com/aq';
-    let trustedUrl = $sce.trustAsResourceUrl(url);
-
-    $http.defaults.jsonpCallbackParam = 'cb';
-
-    let params = {
-      c: 'US',
-      format: 'JSON',
-      query: 'gre'
-    };
-    
-    console.log('url:', url);
-    console.log('trustedUrl:', trustedUrl);
-    $http.jsonp(trustedUrl, {params: params}).then ( r => {
-        console.log('r:', r.data.RESULTS[0]);
-    }, e => {
-      console.log('ERROR:', e);
-    })
-  }
+  // $interval(weather.refreshForecasts, 10*1000);
+  $interval(weather.refreshForecasts, 30*1000);
 
   /* Get the weather data. */
   function loadCityList(r) {
@@ -166,12 +121,58 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
       console.log('Dates:', r);
     })
   }
-  function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
-    navigator.geolocation.getCurrentPosition(function(position) {
-      autocomp.getCityFromGeo(position.coords.latitude, position.coords.longitude);
+  $scope.testWU = function(query) {   // TESTING
+    let url = 'https://autocomplete.wunderground.com/aq';
+    let trustedUrl = $sce.trustAsResourceUrl(url);
+
+    $http.defaults.jsonpCallbackParam = 'cb';
+
+    let params = {
+      c: 'US',
+      format: 'JSON',
+      query: 'gre'
+    };
+    
+    console.log('url:', url);
+    console.log('trustedUrl:', trustedUrl);
+    $http.jsonp(trustedUrl, {params: params}).then ( r => {
+        console.log('r:', r.data.RESULTS[0]);
+    }, e => {
+      console.log('ERROR:', e);
     })
   }
-  testGeoLocation();
+  function testGeoLocation() {      // NEW FUNCTIONALITY TESTING
+    navigator.geolocation.getCurrentPosition( position => {
+      autocomp.getCityFromGeo(position.coords.latitude, position.coords.longitude);
+    }, error => {
+      console.log('error.PERMISSION_DENIED:', error.PERMISSION_DENIED );
+      console.log('error.code:', error.code);
+      console.log('error:', error);
+    })
+  }
+  function testGeoLocation2() {      // NEW FUNCTIONALITY TESTING
+    console.log('running testGeoLocation2! Now wait 15 seconds for local urlfetch to run...');
+    console.log('testGeoLocation2 is OFF for now.');
+    // navigator.geolocation.getCurrentPosition( position => {
+    //   weather.getLocation(position.coords.latitude, position.coords.longitude);
+    // }, error => {
+    //   console.log('error.PERMISSION_DENIED:', error.PERMISSION_DENIED );
+    //   console.log('error.code:', error.code);
+    //   console.log('error:', error)
+    // })
+  }
+  $scope.getWeather = function() {    // TESTING
+    weather.refreshForecasts();
+  }
+  $scope.testGeoInput = function() {
+    console.log('testing geo input:', navigator.geolocation);
+    /**
+     * 
+     */
+    testGeoLocation2();
+    // testGeoLocation();
+  }
+  // testGeoLocation();
   
   /* textChg and itemChg belong to the autocomplete (ng) input box. */
   $scope.textChg = function(query) {
@@ -205,7 +206,16 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
      * Runs when user selects city from pull down list.
     */
 
-    if(city && city.zip !== wData.info.zip){
+    if (city && city.text === 'Current Location'){
+      console.log('get city based on current location:', );
+      navigator.geolocation.getCurrentPosition( position => {
+        weather.getLocation(position.coords.latitude, position.coords.longitude);
+      }, error => {
+        console.log('error:', error)
+      })
+    }
+    else if (city && city.zip !== wData.info.zip){
+      console.log('going to run changeCity func now:');
       changeCity(city);
       autocomp.addCity(city);
     }
@@ -267,7 +277,7 @@ var cont = angular.module('weatherCtrl', ['weatherServices', 'ngMaterial', 'ngSa
           month:    wData.monthUser.month,
           view:     'month'
         };
-    weather.httpReqObj(data, '/addtoqueue');
+    weather.httpReqObj(data, 'addtoqueue');
   }
 })
 .controller('tendayCtrl', function($scope, wDB, wData, weather) {
