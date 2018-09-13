@@ -18,7 +18,7 @@
       </md-list-item>
     </md-list>
     
-    <div layout='row' style="margin: 14px 0;">
+    <div layout='row' style="margin: 8px 0;">
       <div class="imageCol" flex='20'>
         <img ng-src='{{o.info.current.weather.icon_url}}'/>
       </div>
@@ -74,7 +74,7 @@
     
     <!--    Today's Forecast    -->
     <md-card>
-      <md-card-content>
+      <md-card-content style="padding-top:8px; padding-bottom:8px;">
         <p>{{o.info.current.weather.forecastTitle0}}: {{o.info.current.weather.forecastText0}}</p>
         <p>{{o.info.current.weather.forecastTitle1}}: {{o.info.current.weather.forecastText1}}</p>
       </md-card-content>
@@ -82,7 +82,7 @@
     
     <!--    Sunrise/Sunset and Records    -->
     <md-card>
-      <md-card-content>
+      <md-card-content style="padding-top:8px; padding-bottom:8px;">
         <p>
           Sunrise: {{o.info.current.weather.sunriseHour}}:{{o.info.current.weather.sunriseMin}} AM<br>
           Sunset: {{o.info.current.weather.sunsetHour}}:{{o.info.current.weather.sunsetMin}} PM
@@ -98,7 +98,11 @@
       </md-card-content>
     </md-card>
 
-    <md-list ng-cloak ng-show='o.info.current.weather.alerts.length'>
+    <p style="padding-left:8px;">
+      {{ o.info.current.weather.observation_time }}
+    </p>
+
+  <md-list ng-cloak ng-show='o.info.current.weather.alerts.length'>
       <md-subheader style="margin:-12px 0px -18px 0px;"><h4>Weather Alerts</h4></md-subheader>
       <md-list-item ng-repeat="alert in o.info.current.weather.alerts">
         <div layout='column'>
@@ -109,10 +113,6 @@
         </div>
       </md-list-item>
     </md-list>
-
-    <p>
-        Current {{ o.info.current.weather.observation_time }}
-    </p>
 
   </div>
 </div>

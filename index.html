@@ -105,19 +105,23 @@
         </form>
         <div ng-view></div>
 
-        <p id='version' ng-cloak>
-          Version 1.30m - {{main.info.location}} - {{main.info.zip}}
+        <p style="padding-left:8px;" id='version' ng-cloak>
+          Version 1.30n - {{main.info.location}} - {{main.info.zip}}
         </p>
         <ul style='list-style-type:none;'>
           <li ng-repeat='t in main.requestDurations track by $index'>{{t}}</li>
         </ul>
         
         <!-- TESTING -->
+<!-- 
         <button ng-click='logData()'>info</button>
         <button ng-click='downloadWeather()'>downloadWeather</button>
         <button ng-click='getMonthObj()'>GetMonth</button>
         <button ng-click='getDates()'>Dates</button>
         <button ng-click='testWU("gre")'>TestWU</button>
+         -->
+        <!-- END TESTING -->
+
       </div>
     </div>
   </body>

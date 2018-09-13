@@ -77,7 +77,8 @@ var app = angular.module('weatherServices', [])
       let format = 'MMM d, y h:mm a'
           ts = (timestamp === 0) ? 'Never' : $filter('date')(timestamp, format);
 
-      return ' may be old, last updated: ' + ts;
+      // return ' may be old, last updated: ' + ts;
+      return ' last updated: ' + ts;
     }
     return '';    
   }

@@ -78,7 +78,7 @@ def trim_month(d):
     # sample date string: Last Updated on June 27, 5:27 PM PDT
     li = d.split(' ')
     li[3] = li[3][:3]
-    li[0] = li[0].lower()   # lowercase the word 'Last'
+    # li[0] = li[0].lower()   # lowercase the word 'Last'
     return ' '.join(li)
 
 def process_current(raw):
